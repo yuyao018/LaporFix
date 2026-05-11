@@ -16,11 +16,9 @@ class ProfilePage extends StatelessWidget {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.functionBackground,
-        ),
-        child: Text('Profile Page'),
-      )
+        decoration: const BoxDecoration(gradient: AppTheme.functionBackground),
+        child: const Text('Profile Page'),
+      ),
     );
   }
 }

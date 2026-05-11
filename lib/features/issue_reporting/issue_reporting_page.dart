@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/button_add_fab.dart';
 import '../../widgets/main_appbar.dart';
 
 class IssueReportingPage extends StatelessWidget {
@@ -14,9 +15,10 @@ class IssueReportingPage extends StatelessWidget {
         showFilter: true,
         filterList: const ['All', 'Submitted', 'In Progress', 'Completed'],
       ),
-      body: const Center(
-        child: Text('Issue Reporting Page'),
-      ),
+      body: const Center(child: Text('Issue Reporting Page')),
+      // add report here
+      floatingActionButton: ButtonAddFab(onPressed: () {}),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }

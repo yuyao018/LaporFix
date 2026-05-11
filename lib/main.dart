@@ -1,16 +1,22 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'firebase_options.dart';
 import 'widgets/bottom_navbar.dart';
 import 'theme/app_theme.dart';
 import 'features/announcement/announcement_page.dart';
 import 'features/issue_reporting/issue_reporting_page.dart';
 import 'features/upvoting/upvoting_page.dart';
-import 'features/Profile/ProfilePage.dart';
+import 'features/profile/profile_page.dart';
 
 // Feature page imports — uncomment each once the file is created:
 // import 'features/status_tracker/status_tracker_page.dart';  // Feature 2: Status Tracker
 // import 'features/AI_chatbot/ai_chatbot_page.dart';          // Feature 5: AI Policy Chat
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
