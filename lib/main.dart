@@ -1,18 +1,20 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'widgets/bottom_navbar.dart';
 import 'theme/app_theme.dart';
+import 'features/auth/auth_page.dart';
 import 'features/announcement/announcement_page.dart';
 import 'features/issue_reporting/issue_reporting_page.dart';
 import 'features/upvoting/upvoting_page.dart';
-import 'features/profile/profile_page.dart';
+import 'features/Profile/ProfilePage.dart';
 
 // Feature page imports — uncomment each once the file is created:
 // import 'features/status_tracker/status_tracker_page.dart';  // Feature 2: Status Tracker
 // import 'features/AI_chatbot/ai_chatbot_page.dart';          // Feature 5: AI Policy Chat
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -27,9 +29,25 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'UrbanFix',
+      title: 'LaporFix',
       theme: AppTheme.mainTheme,
-      home: const RootNavigation(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          // Show loading while checking auth state
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          // If logged in, show main app
+          if (snapshot.hasData) {
+            return const RootNavigation();
+          }
+          // If not logged in, show auth page
+          return const AuthPage();
+        },
+      ),
     );
   }
 }
