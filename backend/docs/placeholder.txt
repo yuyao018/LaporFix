@@ -1,0 +1,10 @@
+# Knowledge Base
+
+Drop your .txt or .pdf documents here.
+The RAG pipeline will automatically index them on startup.
+
+Example documents to add:
+- how_to_report_issue.txt
+- issue_categories.txt
+- city_contacts.txt
+- faq.txt

@@ -42,7 +42,7 @@ class ChatbotFab extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Image.asset(
-                'assets/image/lapo_robot.png',
+                'assets/icons/lapo_robot.png',
                 fit: BoxFit.contain,
               ),
             ),

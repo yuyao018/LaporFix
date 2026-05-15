@@ -1,0 +1,206 @@
+# LaporFix Announcement Board — How It Works (Regular User)
+
+## Overview
+
+The Announcement page is the **Home** tab in LaporFix. It shows official posts from authorities (admins) about local updates such as water cuts, power outages, road works, events, and general notices.
+
+Data is stored in Firebase Firestore under the `announcements` collection. Each announcement can have comments in a subcollection: `announcements/{id}/comments`.
+
+---
+
+## Accessing the Page
+
+1. Sign in to LaporFix.
+2. Open the app — the bottom navigation **Home** icon opens the Announcement page.
+3. The page title in the app bar is **"Announcement"**.
+
+Regular users **cannot** create new announcements. Only users with `role: admin` in their Firestore user profile see a **+** floating button to create posts.
+
+---
+
+## What the User Sees on the List Page
+
+### Location header (📌 pin row)
+
+- At the top, a white bar shows the **current viewing location**.
+- By default, this is derived from the user's **home address** on their profile (`users` document: `homeAddress`, `area`, `state`).
+- The address is shortened to suburb/city + state (e.g. `Ayer Itam, Penang`).
+- If the user has no location set, the label shows **"All Locations"**.
+
+### Announcement feed
+
+- Posts appear as **colour-coded cards** (green, blue, yellow, orange, red, pink, purple, teal).
+- Each card shows:
+  - **Title** (headline)
+  - **Caption** (short description, up to 3 lines on the list)
+  - **"Attachments"** label if the post has images, videos, or documents
+- Newest posts appear first (`createdAt` descending).
+- Deleted posts (`isDeleted: true`) are hidden from everyone.
+
+### Location filtering (default, no search)
+
+When the user is **not** searching:
+
+- Announcements are filtered to match the user's **area** (suburb) from their profile.
+- A post is shown if its `target.location.area` equals the user's `area`, OR if `target.location.full` contains the user's area name.
+- If the user has no area/state on their profile, **all** non-deleted announcements are shown.
+
+### Search
+
+- The app bar has a **search bar**.
+- When the user types a query, filtering switches to **keyword search** across:
+  - Announcement title
+  - Caption
+  - Location area, city, state, and full address
+- During search, location-based filtering is **not** applied — matching posts from any area can appear.
+- The 📌 location header updates to show the area from the **first search result**.
+
+### Empty state
+
+- If no posts match, the user sees: **"No announcements found."**
+
+---
+
+## Opening an Announcement (Detail Page)
+
+Tap any card to open the **Announcement detail** screen.
+
+### Detail card contents
+
+- **Date and time** the post was created (e.g. `10 May 2026, 8.30 a.m.`)
+- **Title** and full **caption** (not truncated)
+- **Audience and location** line, e.g. `All ~ Ayer Itam, 11500` (audience type + area/postcode)
+- Card uses the same colour theme as on the list
+
+### Attachments (if any)
+
+- **Images** — horizontal scroll; tap to open in browser
+- **Videos** — tap row to open link
+- **Documents** — tap row to open link
+
+### Comments
+
+- All users can read comments on a post.
+- Signed-in users can **post a comment** using the input at the bottom ("Comment Something..").
+- Comments show: profile photo (or default icon), display name, comment text.
+- Comments are ordered oldest first.
+- Empty state: **"No comments yet. Be the first to comment!"**
+- Must be signed in to comment; otherwise a snackbar says **"Please sign in to comment."**
+
+### What regular users cannot do on detail page
+
+- Edit or delete announcements (admin only, via menu on detail page)
+
+---
+
+## Announcement Data Fields (for reference)
+
+Each Firestore `announcements` document includes:
+
+| Field | Description |
+|-------|-------------|
+| title | Headline shown on card |
+| caption | Main message body |
+| colour | Card theme: green, blue, yellow, orange, red, pink, purple, teal |
+| createdAt | When the post was published |
+| isDeleted | Soft-delete flag; hidden when true |
+| attachments | List of image/video/document objects with url, type, name |
+| target.audience | Who the post is for (e.g. all, residents) |
+| target.location | area, city, state, full address string |
+
+---
+
+## Connection to LAPI Chatbot
+
+When a user taps **"Check for water/power cut"** in the chatbot, LAPI queries the same `announcements` collection, filters by the user's area, and shows **disruption notice cards** for matching water, power, or road maintenance posts.
+
+---
+
+## Test Questions for LAPI / Manual QA
+
+Use these questions to verify the chatbot and app behaviour. Expected behaviour is noted in parentheses.
+
+### Finding and viewing announcements
+
+1. Where do I see announcements in LaporFix?  
+   *(Home tab → Announcement page)*
+
+2. How are announcements sorted on the home feed?  
+   *(Newest first)*
+
+3. What information appears on an announcement card before I open it?  
+   *(Title, caption preview, colour, attachments indicator)*
+
+4. What happens when I tap an announcement card?  
+   *(Opens detail page with full caption, date, location, attachments, comments)*
+
+### Location and filtering
+
+5. Why do I only see some announcements and not others?  
+   *(Filtered by your profile area/suburb by default)*
+
+6. What does the pin 📌 location row at the top mean?  
+   *(Your home area or search result location)*
+
+7. I moved to a new suburb — will I still see old area announcements?  
+   *(Only if they match your updated profile area, or you search for them)*
+
+8. How do I find announcements for another area?  
+   *(Use the search bar — search by area name, city, or keywords in title/caption)*
+
+9. What shows if I have no home location set on my profile?  
+   *(Label "All Locations"; all non-deleted announcements may appear)*
+
+### Search
+
+10. How do I search for a water cut announcement?  
+    *(Type "water" or area name in the Announcement search bar)*
+
+11. Does search only look at titles?  
+    *(No — title, caption, and location fields)*
+
+### Comments and attachments
+
+12. Can I comment on an announcement?  
+    *(Yes, if signed in — use bottom comment box on detail page)*
+
+13. Can I view photos or documents attached to an announcement?  
+    *(Yes, on detail page — tap to open)*
+
+14. What if an announcement has no comments yet?  
+    *(Shows "No comments yet. Be the first to comment!")*
+
+### Disruptions and chatbot
+
+15. How do I check for water or power cuts without opening Announcements?  
+    *(LAPI chatbot → tap "Check for water/power cut" suggestion card)*
+
+16. Will the chatbot show road maintenance announcements?  
+    *(Yes, if they match water/power/road keywords and your area)*
+
+### Permissions
+
+17. Can I create a new announcement as a regular user?  
+    *(No — only admin role sees the + create button)*
+
+18. Can I delete someone else's announcement?  
+    *(No — admin only)*
+
+### Edge cases
+
+19. Why does the list say "No announcements found"?  
+    *(No posts match your area, search query, or all are deleted)*
+
+20. Are deleted announcements visible?  
+    *(No — isDeleted posts are hidden)*
+
+---
+
+## Quick RAG Chatbot Prompts (copy-paste)
+
+- How does the announcement page work?
+- How do I find announcements for my area?
+- How do I search announcements?
+- Can I comment on an announcement?
+- Where are water cut notices shown?
+- Why can't I create an announcement?

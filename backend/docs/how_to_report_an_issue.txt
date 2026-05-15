@@ -1,0 +1,23 @@
+📝 Reporting an Issue on LaporFix
+
+Reporting a problem in your community is quick and easy. Follow these steps to ensure your report reaches the right department:
+
+1. Open the Report Form
+Click on the (+) icon on your dashboard to open the submission form.
+
+2. Capture and Upload
+Start by uploading a clear photo of the issue. A good visual helps our team assess the severity and bring the right tools for the fix.
+
+3. Categorize Your Report
+Select the appropriate category (e.g., Road Damage, Waste Management, Street Lighting). This ensures the report is routed to the correct specialized team.
+
+4. Set the Location
+Click "Next" to access the map.
+GPS Pin: Your current GPS location will be detected automatically. Please ensure the pin is dropped exactly where the issue is located.
+Address Details: Add any specific landmarks or floor numbers in the additional address field to help our team find the spot faster.
+
+5. Finalize with Notes
+Add any additional notes or descriptions (e.g., "The pothole is hidden under a puddle"). Once you're ready, hit Submit.
+
+💡 What happens next?
+You will receive a Ticket ID immediately. You can track the progress of your fix in real-time through the "My Reports" section or by asking LAPI for an update!

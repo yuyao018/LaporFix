@@ -9,10 +9,11 @@ import 'features/announcement/announcement_page.dart';
 import 'features/issue_reporting/issue_reporting_page.dart';
 import 'features/upvoting/upvoting_page.dart';
 import 'features/Profile/ProfilePage.dart';
+import 'features/AI_chatbot/chatbot_button.dart';
+import 'features/AI_chatbot/chatbot_page.dart';
 
 // Feature page imports — uncomment each once the file is created:
 // import 'features/status_tracker/status_tracker_page.dart';  // Feature 2: Status Tracker
-// import 'features/AI_chatbot/ai_chatbot_page.dart';          // Feature 5: AI Policy Chat
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,6 +86,19 @@ class _RootNavigationState extends State<RootNavigation> {
               currentIndex: _selectedIndex,
               onTap: (index) => setState(() => _selectedIndex = index),
             ),
+      floatingActionButton: ChatbotFab(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatbotPage(
+                onBack: () => Navigator.pop(context),
+              ),
+            ),
+          );
+        },
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
