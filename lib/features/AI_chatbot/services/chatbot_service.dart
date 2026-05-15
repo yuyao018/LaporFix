@@ -102,6 +102,7 @@ class ChatbotService {
   /// Send an image + optional text to the vision endpoint.
   Future<Map<String, String>> sendVisionMessage({
     required String imagePath,
+    required String imageUrl,
     String message = '',
     String? sessionId,
   }) async {
@@ -111,6 +112,7 @@ class ChatbotService {
     );
     request.fields['message'] = message;
     request.fields['user_id'] = _userId;
+    request.fields['image_url'] = imageUrl;
     if (sessionId != null) request.fields['session_id'] = sessionId;
     request.files.add(await http.MultipartFile.fromPath('image', imagePath));
 
@@ -125,6 +127,49 @@ class ChatbotService {
       };
     }
     throw Exception('Vision backend error ${response.statusCode}: ${response.body}');
+  }
+
+  /// Persist a client-generated turn (suggestion cards) without calling the LLM.
+  Future<String> saveTurn({
+    required String userMessage,
+    required List<Map<String, dynamic>> assistantMessages,
+    String? sessionId,
+  }) async {
+    final response = await _client
+        .post(
+          Uri.parse('$_baseUrl/chat/save-turn'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'user_message': userMessage,
+            'assistant_messages': assistantMessages,
+            'session_id': sessionId,
+            'user_id': _userId,
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['session_id'] as String;
+    }
+    throw Exception('Save turn failed ${response.statusCode}: ${response.body}');
+  }
+
+  /// Delete all chat sessions for the current user (Firestore + backend memory).
+  Future<int> clearAllSessions() async {
+    final response = await _client
+        .post(
+          Uri.parse('$_baseUrl/chat/clear-all'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'user_id': _userId}),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['deleted_count'] as int? ?? 0;
+    }
+    throw Exception('Clear all failed ${response.statusCode}: ${response.body}');
   }
 
   /// Clear a session from backend memory and Firestore.

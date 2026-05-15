@@ -14,25 +14,44 @@ class ChatMessage {
   /// When set, the assistant bubble renders a [DisruptionNoticeCard] instead of plain text.
   final DisruptionNotice? disruptionNotice;
 
+  /// Firebase Storage download URL for a user-uploaded chat image.
+  final String? imageUrl;
+
   const ChatMessage({
     required this.text,
     required this.role,
     required this.timestamp,
     this.showReportButton = false,
     this.disruptionNotice,
+    this.imageUrl,
   });
 
   bool get isUser => role == MessageRole.user;
 
+  /// Text shown in the bubble (strips the [Image] prefix when an image is attached).
+  String get displayText {
+    const prefix = '[Image] ';
+    if (imageUrl != null && text.startsWith(prefix)) {
+      return text.substring(prefix.length).trim();
+    }
+    return text;
+  }
+
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
-      text: json['content'] as String,
+      text: json['content'] as String? ?? '',
       role: (json['role'] as String) == 'user'
           ? MessageRole.user
           : MessageRole.assistant,
       timestamp: json['timestamp'] != null
           ? DateTime.tryParse(json['timestamp'] as String) ?? DateTime.now()
           : DateTime.now(),
+      imageUrl: json['image_url'] as String?,
+      disruptionNotice: json['disruption_notice'] != null
+          ? DisruptionNotice.fromJson(
+              json['disruption_notice'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 }

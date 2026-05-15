@@ -32,7 +32,13 @@ logger = logging.getLogger(__name__)
 
 from ingest import get_embeddings, get_or_load_vector_store
 from rag_chain import build_rag_chain, messages_from_history, SYSTEM_INSTRUCTION
-from firestore_service import init_firestore, save_turn, delete_session
+from firestore_service import (
+    init_firestore,
+    save_turn,
+    save_local_turn,
+    delete_session,
+    delete_all_user_sessions,
+)
 from firebase_admin import firestore
 from image_doc_reader import extract_text_from_file
 
@@ -125,6 +131,26 @@ class ResetRequest(BaseModel):
     session_id: str
 
 
+class ClearAllRequest(BaseModel):
+    user_id: str
+
+
+class AssistantMessagePayload(BaseModel):
+    content: str = ""
+    disruption_notice: Optional[dict] = None
+
+
+class SaveTurnRequest(BaseModel):
+    user_message: str
+    assistant_messages: list[AssistantMessagePayload]
+    session_id: Optional[str] = None
+    user_id: Optional[str] = "anonymous"
+
+
+class SaveTurnResponse(BaseModel):
+    session_id: str
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
@@ -175,6 +201,7 @@ async def chat_vision(
     message: str = Form(""),
     session_id: Optional[str] = Form(None),
     user_id: Optional[str] = Form("anonymous"),
+    image_url: Optional[str] = Form(None),
     image: UploadFile = File(...),
 ):
     """
@@ -221,8 +248,14 @@ async def chat_vision(
     if len(history) > 20:
         sessions[session_id] = history[-20:]
 
-    save_turn(session_id, user_id, f"[Image] {user_question}", answer,
-              is_first=len(history) == 2)
+    save_turn(
+        session_id,
+        user_id,
+        f"[Image] {user_question}",
+        answer,
+        is_first=len(history) == 2,
+        user_image_url=image_url.strip() if image_url else None,
+    )
 
     return ChatResponse(answer=answer, session_id=session_id)
 
@@ -282,6 +315,39 @@ async def chat_document(
     return ChatResponse(answer=answer, session_id=session_id)
 
 
+@app.post("/chat/save-turn", response_model=SaveTurnResponse)
+async def save_turn_endpoint(req: SaveTurnRequest):
+    """
+    Persist a client-side chat turn (e.g. water/power cut card, ticket lookup)
+    to Firestore without invoking the LLM.
+    """
+    session_id = req.session_id or str(uuid.uuid4())
+    user_id = req.user_id or "anonymous"
+
+    if session_id not in sessions:
+        sessions[session_id] = []
+
+    assistant_payloads = [
+        {
+            "content": m.content,
+            "disruption_notice": m.disruption_notice,
+        }
+        for m in req.assistant_messages
+    ]
+    save_local_turn(session_id, user_id, req.user_message, assistant_payloads)
+
+    sessions[session_id].append({"role": "user", "content": req.user_message})
+    for m in req.assistant_messages:
+        sessions[session_id].append({
+            "role": "assistant",
+            "content": m.content or "[Disruption notice]",
+        })
+    if len(sessions[session_id]) > 20:
+        sessions[session_id] = sessions[session_id][-20:]
+
+    return SaveTurnResponse(session_id=session_id)
+
+
 @app.post("/chat/reset")
 async def reset_session(req: ResetRequest):
     # Clear in-memory history
@@ -292,6 +358,21 @@ async def reset_session(req: ResetRequest):
     delete_session(req.session_id)
 
     return {"message": "Session cleared.", "session_id": req.session_id}
+
+
+@app.post("/chat/clear-all")
+async def clear_all_sessions(req: ClearAllRequest):
+    """Delete all chat sessions for a user (triggered by /clear in the app)."""
+    user_id = req.user_id or "anonymous"
+    deleted_ids = delete_all_user_sessions(user_id)
+
+    for session_id in deleted_ids:
+        sessions.pop(session_id, None)
+
+    return {
+        "message": f"Cleared {len(deleted_ids)} session(s).",
+        "deleted_count": len(deleted_ids),
+    }
 
 
 @app.get("/chat/sessions/{user_id}")
@@ -371,11 +452,16 @@ async def get_messages(user_id: str, session_id: str):
         result = []
         for msg in msgs:
             data = msg.to_dict()
-            result.append({
+            entry = {
                 "role": data.get("role"),
                 "content": data.get("content"),
                 "timestamp": data.get("timestamp").isoformat() if data.get("timestamp") else None,
-            })
+            }
+            if data.get("image_url"):
+                entry["image_url"] = data["image_url"]
+            if data.get("disruption_notice"):
+                entry["disruption_notice"] = data["disruption_notice"]
+            result.append(entry)
         return {"messages": result}
     except HTTPException:
         raise

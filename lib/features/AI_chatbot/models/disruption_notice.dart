@@ -57,6 +57,32 @@ class DisruptionNotice {
     return keywords.any((kw) => combined.contains(kw));
   }
 
+  Map<String, dynamic> toJson() => {
+        'type': type.name,
+        'title': title,
+        'status': status.name,
+        'estimated_restoration': estimatedRestoration.toIso8601String(),
+        'reason': reason,
+      };
+
+  factory DisruptionNotice.fromJson(Map<String, dynamic> json) {
+    return DisruptionNotice(
+      type: DisruptionType.values.firstWhere(
+        (t) => t.name == json['type'],
+        orElse: () => DisruptionType.water,
+      ),
+      title: json['title'] as String? ?? '',
+      status: MaintenanceStatus.values.firstWhere(
+        (s) => s.name == json['status'],
+        orElse: () => MaintenanceStatus.repairing,
+      ),
+      estimatedRestoration: DateTime.tryParse(
+            json['estimated_restoration'] as String? ?? '') ??
+          DateTime.now(),
+      reason: json['reason'] as String? ?? '',
+    );
+  }
+
   factory DisruptionNotice.fromAnnouncement(Map<String, dynamic> data) {
     final type = classifyType(data);
     final title = (data['title'] ?? _defaultTitle(type)).toString();

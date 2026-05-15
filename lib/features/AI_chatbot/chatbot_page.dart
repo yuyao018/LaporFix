@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -108,9 +111,64 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
   // ── Called by ChatBox.onSend (plain text only) ─────────────────────────────
   Future<void> _onSend(String text) async {
+    if (text.trim().toLowerCase() == '/clear') {
+      setState(() => _pendingAttachment = null);
+      await _clearAllHistory();
+      return;
+    }
+
     final attach = _pendingAttachment;
     setState(() => _pendingAttachment = null);
     await _sendMessage(text, attachment: attach);
+  }
+
+  Future<void> _clearAllHistory() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final count = await _service.clearAllSessions();
+      if (!mounted) return;
+      setState(() {
+        _items.clear();
+        _sessionId = null;
+        _hasStartedChat = false;
+        _pendingAttachment = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            count > 0
+                ? 'Cleared $count chat session${count == 1 ? '' : 's'}.'
+                : 'No chat history to clear.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not clear history. Is the backend running?'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<String?> _uploadChatImage(String localPath) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    final fileName = localPath.split(Platform.pathSeparator).last;
+    final sessionPart = _sessionId ?? 'new';
+    final ref = FirebaseStorage.instance.ref().child(
+      'chat_images/${user.uid}/$sessionPart/${DateTime.now().millisecondsSinceEpoch}_$fileName',
+    );
+
+    await ref.putFile(File(localPath));
+    return ref.getDownloadURL();
   }
 
   Future<void> _sendMessage(
@@ -122,12 +180,24 @@ class _ChatbotPageState extends State<ChatbotPage> {
     if (!hasText && attachment == null) return;
     if (_isLoading) return;
 
+    String? uploadedImageUrl;
+    if (attachment != null && attachment.type == _AttachType.image) {
+      try {
+        uploadedImageUrl = await _uploadChatImage(attachment.path);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not upload image. Please try again.')),
+          );
+        }
+        return;
+      }
+    }
+
     // Build the display text for the user bubble
     String displayText = text.trim();
-    if (attachment != null) {
-      final label = attachment.type == _AttachType.image
-          ? '📷 ${attachment.name}'
-          : '📄 ${attachment.name}';
+    if (attachment != null && attachment.type == _AttachType.doc) {
+      final label = '📄 ${attachment.name}';
       displayText = hasText ? '$label\n$displayText' : label;
     }
 
@@ -137,6 +207,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
         text: displayText,
         role: MessageRole.user,
         timestamp: DateTime.now(),
+        imageUrl: uploadedImageUrl,
       )));
       _isLoading = true;
     });
@@ -148,6 +219,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
       if (attachment != null && attachment.type == _AttachType.image) {
         result = await _service.sendVisionMessage(
           imagePath: attachment.path,
+          imageUrl: uploadedImageUrl!,
           message: text.trim(),
           sessionId: _sessionId,
         );
@@ -298,41 +370,69 @@ class _ChatbotPageState extends State<ChatbotPage> {
         matches.add(data);
       }
 
+      const userMessage = 'Check for water/power cut';
+      final List<Map<String, dynamic>> assistantPayloads;
+      final List<ChatMessage> assistantMessages;
+
       if (matches.isEmpty) {
         final location = userArea.isNotEmpty
             ? userArea
             : userState.isNotEmpty
                 ? userState
                 : 'your area';
-        setState(() {
-          _items.add(_MessageItem(ChatMessage(
-            text: '✅ No water, power, or road maintenance announcements found for $location at the moment.\n\n'
-                'If you are experiencing an issue, you can report it directly through the app.',
+        final reply =
+            '✅ No water, power, or road maintenance announcements found for $location at the moment.\n\n'
+            'If you are experiencing an issue, you can report it directly through the app.';
+        assistantPayloads = [{'content': reply}];
+        assistantMessages = [
+          ChatMessage(
+            text: reply,
             role: MessageRole.assistant,
             timestamp: DateTime.now(),
-          )));
-        });
+          ),
+        ];
       } else {
-        setState(() {
-          final now = DateTime.now();
-          for (final data in matches) {
-            _items.add(_MessageItem(ChatMessage(
-              text: '',
-              role: MessageRole.assistant,
-              timestamp: now,
-              disruptionNotice: DisruptionNotice.fromAnnouncement(data),
-            )));
-          }
-        });
+        final now = DateTime.now();
+        assistantPayloads = [];
+        assistantMessages = [];
+        for (final data in matches) {
+          final notice = DisruptionNotice.fromAnnouncement(data);
+          assistantPayloads.add({'disruption_notice': notice.toJson()});
+          assistantMessages.add(ChatMessage(
+            text: '',
+            role: MessageRole.assistant,
+            timestamp: now,
+            disruptionNotice: notice,
+          ));
+        }
       }
+
+      setState(() {
+        _items.addAll(assistantMessages.map(_MessageItem.new));
+      });
+
+      _sessionId = await _service.saveTurn(
+        userMessage: userMessage,
+        assistantMessages: assistantPayloads,
+        sessionId: _sessionId,
+      );
     } catch (e) {
+      const errorText =
+          'Sorry, I could not check announcements right now. Please try again.';
       setState(() {
         _items.add(_MessageItem(ChatMessage(
-          text: 'Sorry, I could not check announcements right now. Please try again.',
+          text: errorText,
           role: MessageRole.assistant,
           timestamp: DateTime.now(),
         )));
       });
+      try {
+        _sessionId = await _service.saveTurn(
+          userMessage: 'Check for water/power cut',
+          assistantMessages: [{'content': errorText}],
+          sessionId: _sessionId,
+        );
+      } catch (_) {}
     } finally {
       setState(() => _isLoading = false);
       _scrollToBottom();
@@ -356,13 +456,21 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
     try {
       if (user == null) {
+        const reply = 'You need to be logged in to check your tickets.';
         setState(() {
           _items.add(_MessageItem(ChatMessage(
-            text: 'You need to be logged in to check your tickets.',
+            text: reply,
             role: MessageRole.assistant,
             timestamp: DateTime.now(),
           )));
         });
+        try {
+          _sessionId = await _service.saveTurn(
+            userMessage: 'Track my existing ticket',
+            assistantMessages: [{'content': reply}],
+            sessionId: _sessionId,
+          );
+        } catch (_) {}
         return;
       }
 
@@ -410,15 +518,29 @@ class _ChatbotPageState extends State<ChatbotPage> {
           timestamp: DateTime.now(),
         )));
       });
+
+      _sessionId = await _service.saveTurn(
+        userMessage: 'Track my existing ticket',
+        assistantMessages: [{'content': answer}],
+        sessionId: _sessionId,
+      );
     } catch (e) {
-      // Collection may not exist yet or index missing — handle gracefully
+      const errorText =
+          'Could not retrieve your tickets right now. Please check the My Reports section directly.';
       setState(() {
         _items.add(_MessageItem(ChatMessage(
-          text: 'Could not retrieve your tickets right now. Please check the My Reports section directly.',
+          text: errorText,
           role: MessageRole.assistant,
           timestamp: DateTime.now(),
         )));
       });
+      try {
+        _sessionId = await _service.saveTurn(
+          userMessage: 'Track my existing ticket',
+          assistantMessages: [{'content': errorText}],
+          sessionId: _sessionId,
+        );
+      } catch (_) {}
     } finally {
       setState(() => _isLoading = false);
       _scrollToBottom();
@@ -725,7 +847,7 @@ class _ChatBubble extends StatelessWidget {
   Widget _buildMessageBody(TextTheme textTheme, {required bool isUser}) {
     final base = _baseStyle(textTheme, isUser: isUser);
     final bold = _boldStyle(textTheme);
-    final text = message.text;
+    final text = message.displayText;
 
     if (!text.contains('**')) {
       return Text(text, style: base);
@@ -797,7 +919,39 @@ class _ChatBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (message.text.isNotEmpty)
+            if (message.imageUrl != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  message.imageUrl!,
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return SizedBox(
+                      height: 180,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: progress.expectedTotalBytes != null
+                              ? progress.cumulativeBytesLoaded /
+                                  progress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 120,
+                    alignment: Alignment.center,
+                    color: AppTheme.surfaceGrey,
+                    child: const Icon(Icons.broken_image, color: AppTheme.textSecondary),
+                  ),
+                ),
+              ),
+              if (message.displayText.isNotEmpty) const SizedBox(height: 8),
+            ],
+            if (message.displayText.isNotEmpty)
               _buildMessageBody(textTheme, isUser: isUser),
             if (message.showReportButton) ...[
               const SizedBox(height: 16),

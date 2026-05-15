@@ -19,6 +19,8 @@ Each message document:
     "role":      "user" | "assistant",
     "content":   str,
     "timestamp": timestamp,
+    "image_url": str (optional — user image uploads only),
+    "disruption_notice": map (optional — water/power/road disruption cards),
   }
 """
 
@@ -61,7 +63,14 @@ def init_firestore():
     return _db
 
 
-def save_message(session_id: str, user_id: str, role: str, content: str):
+def save_message(
+    session_id: str,
+    user_id: str,
+    role: str,
+    content: str,
+    image_url: str | None = None,
+    disruption_notice: dict | None = None,
+):
     """
     Append a single message to the session's messages sub-collection.
     Also upserts the parent session document with metadata.
@@ -86,32 +95,81 @@ def save_message(session_id: str, user_id: str, role: str, content: str):
         if not session_doc.exists or "created_at" not in (session_doc.to_dict() or {}):
             session_ref.set({"created_at": now}, merge=True)
 
-        # Add the message to the sub-collection
-        session_ref.collection("messages").add(
-            {
-                "role": role,
-                "content": content,
-                "timestamp": now,
-            }
-        )
+        payload = {
+            "role": role,
+            "content": content,
+            "timestamp": now,
+        }
+        if image_url:
+            payload["image_url"] = image_url
+        if disruption_notice:
+            payload["disruption_notice"] = disruption_notice
+
+        session_ref.collection("messages").add(payload)
     except Exception as e:
         # Log but don't crash the request — Firestore is non-critical
         logger.warning("Firestore write failed (non-fatal): %s", e)
 
 
-def save_turn(session_id: str, user_id: str, question: str, answer: str, is_first: bool = False):
+def save_turn(
+    session_id: str,
+    user_id: str,
+    question: str,
+    answer: str,
+    is_first: bool = False,
+    user_image_url: str | None = None,
+):
     """Save both the user question and assistant answer in one call.
     If is_first=True, also saves the question as the session preview."""
     if is_first:
         try:
             db = init_firestore()
+            preview = question[:80] if not user_image_url else f"[Image] {question[:60]}"
             db.collection("chat_sessions").document(session_id).set(
-                {"preview": question[:80]}, merge=True
+                {"preview": preview}, merge=True
             )
         except Exception as e:
             logger.warning("Firestore preview write failed: %s", e)
-    save_message(session_id, user_id, "user", question)
+    save_message(session_id, user_id, "user", question, image_url=user_image_url)
     save_message(session_id, user_id, "assistant", answer)
+
+
+def save_local_turn(
+    session_id: str,
+    user_id: str,
+    user_message: str,
+    assistant_messages: list[dict],
+) -> bool:
+    """
+    Persist a client-generated turn (suggestion cards, ticket lookup, etc.)
+    without calling the LLM. Each assistant_messages item may include:
+      - content (str)
+      - disruption_notice (dict, optional)
+    Returns True if this is the first message in the session.
+    """
+    try:
+        db = init_firestore()
+        session_ref = db.collection("chat_sessions").document(session_id)
+        is_first = not session_ref.get().exists
+
+        if is_first:
+            session_ref.set({"preview": user_message[:80]}, merge=True)
+
+        save_message(session_id, user_id, "user", user_message)
+
+        for msg in assistant_messages:
+            save_message(
+                session_id,
+                user_id,
+                "assistant",
+                msg.get("content", "") or "",
+                disruption_notice=msg.get("disruption_notice"),
+            )
+        return is_first
+    except Exception as e:
+        logger.warning("Firestore local turn write failed (non-fatal): %s", e)
+        return False
+
 
 def delete_session(session_id: str):
     """
@@ -131,3 +189,22 @@ def delete_session(session_id: str):
         logger.info("Deleted Firestore session %s", session_id)
     except Exception as e:
         logger.warning("Firestore delete failed (non-fatal): %s", e)
+
+
+def delete_all_user_sessions(user_id: str) -> list[str]:
+    """Delete every chat session (and its messages) belonging to user_id."""
+    deleted_ids: list[str] = []
+    try:
+        db = init_firestore()
+        docs = (
+            db.collection("chat_sessions")
+            .where("user_id", "==", user_id)
+            .stream()
+        )
+        for doc in docs:
+            delete_session(doc.id)
+            deleted_ids.append(doc.id)
+        logger.info("Deleted %d Firestore session(s) for user %s", len(deleted_ids), user_id)
+    except Exception as e:
+        logger.warning("Firestore bulk delete failed (non-fatal): %s", e)
+    return deleted_ids
