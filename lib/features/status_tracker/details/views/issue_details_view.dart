@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/app_warning_dialog.dart';
 import '../../../../widgets/function_appbar.dart';
 import '../../update_issue/views/update_issue_page.dart';
 import '../viewmodels/issue_details_view_model.dart';
@@ -60,6 +61,23 @@ class IssueDetailsView extends StatelessWidget {
   }
 
   void _openUpdateIssue(BuildContext context) {
+    if (viewModel.isResolved) {
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AppWarningDialog(
+            title: 'Issue Already Completed',
+            message:
+                'This issue has already been completed and can no longer be edited or reversed.',
+            actionLabel: 'Got it',
+            icon: Icons.lock_rounded,
+            onAction: () => Navigator.of(dialogContext).pop(),
+          );
+        },
+      );
+      return;
+    }
+
     // when writes to Firebase, this detail page refreshes after the flow closes
     Navigator.of(context).push(
       MaterialPageRoute(
