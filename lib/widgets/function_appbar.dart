@@ -5,7 +5,6 @@ class FunctionAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showHistory;
   final VoidCallback? onBack;
   final VoidCallback? onHistoryTap;
-
   const FunctionAppBar({
     super.key,
     required this.title,
@@ -47,7 +46,11 @@ class FunctionAppBar extends StatelessWidget implements PreferredSizeWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: IconButton(
-                  icon: const Icon(Icons.history, color: Colors.black, size: 32),
+                  icon: const Icon(
+                    Icons.edit_rounded,
+                    color: Colors.black,
+                    size: 32,
+                  ),
                   onPressed: onHistoryTap,
                 ),
               ),

@@ -81,7 +81,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
                           style: TextButton.styleFrom(
                             backgroundColor: const Color(0xFFC5CDFF),
                           ),
-                          icon: const Icon(Icons.bar_chart, color: Colors.black),
+                          icon: const Icon(
+                            Icons.bar_chart,
+                            color: Colors.black,
+                          ),
                           label: const Text(
                             'Insights',
                             style: TextStyle(
@@ -114,7 +117,15 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
               color: Colors.white,
               padding: const EdgeInsets.only(top: 12, bottom: 10),
               child: FilterBar(
-                filters: filterList ?? const ['All', 'To Review', 'In Review', 'Assigned', 'Completed'],
+                filters:
+                    filterList ??
+                    const [
+                      'All',
+                      'To Review',
+                      'In Review',
+                      'Assigned',
+                      'Completed',
+                    ],
                 onFilterChanged: onFilterChanged,
               ),
             ),

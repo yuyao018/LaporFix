@@ -6,20 +6,15 @@ import 'widgets/bottom_navbar.dart';
 import 'theme/app_theme.dart';
 import 'features/auth/auth_page.dart';
 import 'features/announcement/announcement_page.dart';
-import 'features/issue_reporting/issue_reporting_page.dart';
+import 'features/status_tracker/status_tracker_page.dart';
 import 'features/upvoting/upvoting_page.dart';
 import 'features/Profile/ProfilePage.dart';
 import 'features/AI_chatbot/chatbot_button.dart';
 import 'features/AI_chatbot/chatbot_page.dart';
 
-// Feature page imports — uncomment each once the file is created:
-// import 'features/status_tracker/status_tracker_page.dart';  // Feature 2: Status Tracker
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -65,7 +60,7 @@ class _RootNavigationState extends State<RootNavigation> {
 
   // Tab mapping:
   // 0 — Home      => AnnouncementPage
-  // 1 — Issue     => IssueReportingPage
+  // 1 — Issue     => StatusTrackerPage
   // 2 — Community => UpvotingPage
   // 3 — Profile   => ProfilePage
 
@@ -73,7 +68,9 @@ class _RootNavigationState extends State<RootNavigation> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       const AnnouncementPage(),
-      const IssueReportingPage(),
+      // The Issue tab now opens the status summary page.
+      // The add button is visible there, with the report flow to be wired later.
+      const StatusTrackerPage(),
       const UpvotingPage(),
       ProfilePage(onBack: () => setState(() => _selectedIndex = 0)),
     ];
@@ -91,9 +88,7 @@ class _RootNavigationState extends State<RootNavigation> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ChatbotPage(
-                onBack: () => Navigator.pop(context),
-              ),
+              builder: (_) => ChatbotPage(onBack: () => Navigator.pop(context)),
             ),
           );
         },
