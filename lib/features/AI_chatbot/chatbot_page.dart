@@ -30,6 +30,27 @@ class _DateHeader extends _ChatItem {
   _DateHeader(this.sessionTime);
 }
 
+class _TicketItem extends _ChatItem {
+  final String ticketId;
+  final String category;
+  final String status;       // 'submitted' | 'in_progress' | 'resolved'
+  final String? expectedFixDate;
+  final String? title;
+  final String? description;
+  final String? location;
+  final DateTime? createdAt;
+  _TicketItem({
+    required this.ticketId,
+    required this.category,
+    required this.status,
+    this.expectedFixDate,
+    this.title,
+    this.description,
+    this.location,
+    this.createdAt,
+  });
+}
+
 // ── Pending attachment ────────────────────────────────────────────────────────
 enum _AttachType { image, doc }
 
@@ -474,56 +495,135 @@ class _ChatbotPageState extends State<ChatbotPage> {
         return;
       }
 
+      // Fetch all tickets for this user, filter by status in Dart
+      // (avoids composite index requirement and casing issues)
       final snapshot = await FirebaseFirestore.instance
-          .collection('issues')
-          .where('userId', isEqualTo: user.uid)
-          .where('status', whereIn: ['submitted', 'in_progress', 'Submitted', 'In Progress'])
-          .orderBy('createdAt', descending: true)
+          .collection('issue')
+          .where('reporterID', isEqualTo: user.uid)
           .get();
 
-      String answer;
-      if (snapshot.docs.isEmpty) {
-        answer = '✅ You have no open tickets at the moment.\n\n'
-            'If you have an issue to report, tap the **Report Issue** button to get started.';
-      } else {
-        final buf = StringBuffer();
-        buf.writeln('📋 You have ${snapshot.docs.length} open ticket${snapshot.docs.length > 1 ? 's' : ''}:\n');
-
-        for (final doc in snapshot.docs) {
-          final data = doc.data();
-          final title = data['title'] ?? data['category'] ?? 'Issue';
-          final status = data['status'] ?? 'Submitted';
-          final ticketId = data['ticketId'] ?? doc.id.substring(0, 8).toUpperCase();
-          final createdAt = data['createdAt'];
-          String dateStr = '';
-          if (createdAt is Timestamp) {
-            final dt = createdAt.toDate();
-            dateStr = ' • ${dt.day}/${dt.month}/${dt.year}';
+      // Filter open tickets — match any non-resolved status regardless of casing/spacing
+      final docs = snapshot.docs.where((doc) {
+        final s = (doc.data()['status'] ?? '').toString().toLowerCase().trim();
+        return s != 'resolved' && s != 'completed' && s != 'closed' && s.isNotEmpty;
+      }).toList()
+        ..sort((a, b) {
+          final ta = a.data()['createdAt'];
+          final tb = b.data()['createdAt'];
+          if (ta is Timestamp && tb is Timestamp) {
+            return tb.compareTo(ta); // newest first
           }
+          return 0;
+        });
 
-          final statusIcon = status.toLowerCase().contains('progress') ? '🔧' : '📨';
-          buf.writeln('$statusIcon **$title**');
-          buf.writeln('   Ticket: #$ticketId$dateStr');
-          buf.writeln('   Status: $status\n');
+      if (docs.isEmpty) {
+        const reply = '✅ You have no open tickets at the moment.\n\n'
+            'If you have an issue to report, tap the **Report Issue** button to get started.';
+        setState(() {
+          _items.add(_MessageItem(ChatMessage(
+            text: reply,
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          )));
+        });
+        try {
+          _sessionId = await _service.saveTurn(
+            userMessage: 'Track my existing ticket',
+            assistantMessages: [{'content': reply}],
+            sessionId: _sessionId,
+          );
+        } catch (_) {}
+        return;
+      }
+
+      // Show a header message then one card per ticket
+      final headerText =
+          '📋 You have ${docs.length} open ticket${docs.length > 1 ? 's' : ''}:';
+
+      final now = DateTime.now();
+      final assistantPayloads = <Map<String, dynamic>>[];
+      final assistantMessages = <ChatMessage>[];
+      final ticketItems = <_TicketItem>[];
+
+      // Header
+      assistantPayloads.add({'content': headerText});
+      assistantMessages.add(ChatMessage(
+        text: headerText,
+        role: MessageRole.assistant,
+        timestamp: now,
+      ));
+
+      for (final doc in docs) {
+        final data = doc.data();
+        final rawStatus = (data['status'] ?? 'submitted').toString();
+        final normStatus = rawStatus.toLowerCase().replaceAll(' ', '_');
+
+        // Parse expected fix date
+        String? fixDate;
+        final fixTs = data['estimatedResolutionAt'];
+        if (fixTs is Timestamp) {
+          final dt = fixTs.toDate();
+          const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          fixDate = '${dt.day} ${months[dt.month]} ${dt.year}';
+        } else if (fixTs is String && fixTs.isNotEmpty) {
+          fixDate = fixTs;
         }
 
-        buf.write('Go to **My Reports** to view full details.');
-        answer = buf.toString();
+        final ticketId = (data['ticketId'] ?? doc.id.substring(0, 8))
+            .toString().toUpperCase();
+        final category = (data['category'] ?? 'Issue').toString();
+        final title = (data['title'] ?? '').toString();
+        final description = (data['description'] ?? '').toString();
+        final loc = data['location'];
+        String location = '';
+        if (loc is Map) {
+          final h = (loc['heading'] ?? '').toString().trim();
+          final p = (loc['postcode'] ?? '').toString().trim();
+          location = [h, p].where((s) => s.isNotEmpty).join(', ');
+        }
+
+        final ticket = _TicketItem(
+          ticketId: ticketId,
+          category: category,
+          status: normStatus,
+          expectedFixDate: fixDate,
+          title: title,
+          description: description,
+          location: location,
+          createdAt: data['createdAt'] is Timestamp
+              ? (data['createdAt'] as Timestamp).toDate()
+              : null,
+        );
+        ticketItems.add(ticket);
+
+        assistantPayloads.add({
+          'ticket': {
+            'ticketId': ticketId,
+            'category': category,
+            'title': title,
+            'description': description,
+            'location': location,
+            'status': normStatus,
+            'expectedFixDate': fixDate ?? '',
+          },
+        });
       }
 
       setState(() {
-        _items.add(_MessageItem(ChatMessage(
-          text: answer,
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-        )));
+        _items.add(_MessageItem(assistantMessages.first)); // header
+        _items.addAll(ticketItems);
       });
 
-      _sessionId = await _service.saveTurn(
-        userMessage: 'Track my existing ticket',
-        assistantMessages: [{'content': answer}],
-        sessionId: _sessionId,
-      );
+      _scrollToBottom();
+
+      try {
+        _sessionId = await _service.saveTurn(
+          userMessage: 'Track my existing ticket',
+          assistantMessages: assistantPayloads,
+          sessionId: _sessionId,
+        );
+      } catch (_) {}
     } catch (e) {
       const errorText =
           'Could not retrieve your tickets right now. Please check the My Reports section directly.';
@@ -769,6 +869,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
         return switch (item) {
           _MessageItem(:final message) => _ChatBubble(message: message),
           _DateHeader(:final sessionTime) => _SessionDivider(time: sessionTime),
+          _TicketItem() => Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                child: _TicketCard(ticket: item),
+              ),
+            ),
         };
       },
     );
@@ -1043,6 +1150,223 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           },
         ),
       ),
+    );
+  }
+}
+
+// ── Ticket Card ───────────────────────────────────────────────────────────────
+class _TicketCard extends StatelessWidget {
+  final _TicketItem ticket;
+  const _TicketCard({required this.ticket});
+
+  static const _statusOrder = ['submitted', 'in_progress', 'resolved'];
+
+  int get _stepIndex {
+    final s = ticket.status.toLowerCase().replaceAll(' ', '_');
+    final i = _statusOrder.indexOf(s);
+    return i < 0 ? 0 : i;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final step = _stepIndex;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF5F80F8), width: 1.5),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────────
+          Text(
+            'Ticket: #${ticket.ticketId}',
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A2E),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Category: ${ticket.category}',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color(0xFF4B5563),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Status progress box ──────────────────────────────────
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFD1D5DB), width: 1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Status',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── Progress tracker ─────────────────────────────
+                _ProgressTracker(currentStep: step),
+
+                // ── Details ──────────────────────────────────────
+                if (ticket.expectedFixDate != null &&
+                    ticket.expectedFixDate!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                          fontSize: 16, color: Color(0xFF4B5563)),
+                      children: [
+                        const TextSpan(
+                          text: 'Expected Fix Date: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: ticket.expectedFixDate),
+                      ],
+                    ),
+                  ),
+                ],
+                if (ticket.title != null && ticket.title!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${ticket.title}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF4B5563),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+                if (ticket.description != null && ticket.description!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    ticket.description!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF6B7280),
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (ticket.location != null && ticket.location!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.location_on_outlined,
+                          size: 20, color: Color(0xFFFF0000)),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          ticket.location!,
+                          style: const TextStyle(
+                              fontSize: 16, color: Color(0xFF000000)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Progress Tracker ──────────────────────────────────────────────────────────
+class _ProgressTracker extends StatelessWidget {
+  final int currentStep; // 0 = submitted, 1 = in_progress, 2 = resolved
+
+  const _ProgressTracker({required this.currentStep});
+
+  static const _labels = ['Submitted', 'In Progress', 'Completed'];
+
+  static const _green = Color(0xFF4CAF50);
+  static const _yellow = Color(0xFFFFC107);
+  static const _grey = Color(0xFFBDBDBD);
+
+  Color _nodeColor(int step) {
+    if (step < currentStep) return _green;
+    if (step == currentStep) {
+      return step == 2 ? _green : (step == 1 ? _yellow : _green);
+    }
+    return _grey;
+  }
+
+  Color _lineColor(int afterStep) {
+    // line between afterStep and afterStep+1
+    return afterStep < currentStep ? _green : _grey;
+  }
+
+  Widget _node(int step) {
+    final color = _nodeColor(step);
+    final done = step < currentStep;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          child: done
+              ? const Icon(Icons.check, color: Colors.white, size: 16)
+              : null,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _labels[step],
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: color == _grey ? _grey : const Color(0xFF1A1A2E),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _line(int afterStep) {
+    return Expanded(
+      child: Container(
+        height: 3,
+        margin: const EdgeInsets.only(bottom: 40), // aligns with circle centre
+        color: _lineColor(afterStep),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _node(0),
+        _line(0),
+        _node(1),
+        _line(1),
+        _node(2),
+      ],
     );
   }
 }

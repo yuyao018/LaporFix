@@ -1,0 +1,207 @@
+# LaporFix Chatbot (LAPI) — User Guide
+
+## Overview
+
+LAPI is the AI assistant inside the LaporFix app. It helps Malaysian citizens ask questions about reporting urban issues (potholes, water cuts, power outages, drainage, road works, and more).
+
+LAPI uses a knowledge base (app help docs and government sources) plus your chat history to answer. Replies are kept short — under 60 words, in complete sentences.
+
+You must be signed in for chat history to be saved. History is stored in Firestore under your user account.
+
+---
+
+## How to Open LAPI
+
+1. Sign in to LaporFix.
+2. Tap the **LAPI** floating button (robot icon) on the main screens.
+3. The chat screen opens with a greeting and three suggestion cards.
+
+---
+
+## Welcome Suggestion Cards
+
+On first open, three quick-action cards appear:
+
+| Card | What it does |
+|------|----------------|
+| **How to report an issue?** | Asks LAPI how to file a report. The reply includes a **Report Issue** button that opens the issue reporting form. |
+| **Track my existing ticket** | Looks up your open tickets in the app (Submitted / In Progress). Does not use the AI — reads your Firestore issues directly. |
+| **Check for water/power cut** | Searches announcements in your area for water, power, or road maintenance. Shows styled **disruption notice cards** (water cut, power cut, or road maintenance) when a match is found. |
+
+You can also type your own question instead of using a card.
+
+---
+
+## Sending Messages
+
+### Plain text
+
+- Type in the box at the bottom and tap send.
+- LAPI remembers the last few messages in the same session for follow-up questions.
+
+### Image upload
+
+1. Tap **+** next to the input box.
+2. Choose **Upload Image**.
+3. Optionally add a text question (e.g. "What is wrong here?").
+4. Send — the image is uploaded to Firebase Storage and analysed; LAPI replies based on what it reads from the image.
+
+### Document upload
+
+1. Tap **+** → **Upload Doc**.
+2. Supported: PDF, DOC, DOCX, TXT.
+3. Optionally add a question (e.g. "Summarise this document").
+4. Send — the backend extracts text and LAPI answers your question about the file.
+
+---
+
+## Report Issue Button
+
+The **Report Issue** button appears **only** when you tap the **"How to report an issue?"** suggestion card — not on every reply.
+
+Tap it to go straight to the issue reporting form.
+
+---
+
+## Disruption Notice Cards
+
+When you tap **"Check for water/power cut"**:
+
+- If announcements match your profile area, you see one or more cards (water = cyan, power = amber, road = orange) with status, estimated restoration time, and reason.
+- If none match, LAPI shows a short text message saying no disruptions were found.
+- This session is saved to your chat history so you can view it later.
+
+---
+
+## Chat History
+
+- Tap the **history icon** in the LAPI app bar to load past sessions into the current chat.
+- Past messages show in order with date dividers between sessions.
+- Images from past uploads are shown again when stored.
+- Disruption cards are restored from saved history.
+
+Each conversation is a **session**. Sessions appear in the history list with a short preview of the first message.
+
+---
+
+## Clear All History
+
+Type **`/clear`** in the chat box (exact command, case-insensitive) and send.
+
+This deletes **all** chat sessions linked to your user ID from Firestore and clears the current chat on screen. You will see a confirmation snackbar.
+
+---
+
+## What LAPI Can Help With
+
+- How to report an issue in LaporFix (steps, photos, location, categories)
+- General questions about urban complaints and public services
+- Follow-up questions in the same chat session
+- Summaries or questions about an uploaded document or image
+
+## What LAPI Does Not Do
+
+- Submit a report for you (use **Report Issue** or the (+) form)
+- Guarantee real-time utility outage data (use **Check for water/power cut** or the Announcements page)
+- Replace official government hotlines for emergencies
+
+---
+
+## Tips for Best Results
+
+- Ask one clear question at a time.
+- For reporting steps, use the **"How to report an issue?"** card or ask "How do I report a pothole?"
+- For outages, use **"Check for water/power cut"** or check **Home → Announcements**.
+- For ticket status, use **"Track my existing ticket"** or **My Reports** in the app.
+- Set your home **area** in your profile so disruption and announcement filters work correctly.
+
+---
+
+## Test Questions for LAPI / Manual QA
+
+Use these to verify the chatbot and RAG knowledge base. Expected behaviour is in parentheses.
+
+### Getting started
+
+1. What is LAPI?  
+   *(Short intro to the LaporFix AI assistant)*
+
+2. How do I open the chatbot?  
+   *(Tap the LAPI floating button)*
+
+3. Who is LAPI for?  
+   *(Citizens reporting urban / infrastructure issues in Malaysia)*
+
+### Reporting issues
+
+4. How do I report an issue?  
+   *(Short steps: form, photo, category, location, submit — under 60 words)*
+
+5. How do I report a pothole?  
+   *(Similar reporting guidance from knowledge base)*
+
+6. Do I need a photo to report?  
+   *(Yes — uploading a clear photo is recommended)*
+
+7. What happens after I submit a report?  
+   *(Ticket ID, track in My Reports or ask LAPI)*
+
+8. When does the Report Issue button appear?  
+   *(Only after tapping "How to report an issue?" card — may answer from guide if indexed)*
+
+### Announcements and disruptions
+
+9. How do I check for a water cut?  
+   *(Use "Check for water/power cut" card or Announcements page)*
+
+10. Where are announcements shown in the app?  
+    *(Home tab / Announcement page)*
+
+11. Will the chatbot show road maintenance alerts?  
+    *(Yes, via disruption cards when announcements match)*
+
+### Tickets
+
+12. How do I track my ticket?  
+    *(Track my existing ticket card or My Reports)*
+
+13. Can LAPI see my open tickets?  
+    *(Track card queries Firestore issues for logged-in user)*
+
+### Attachments
+
+14. Can I upload a photo in chat?  
+    *(Yes — + button → Upload Image)*
+
+15. Can I upload a PDF and ask questions?  
+    *(Yes — + button → Upload Doc)*
+
+### History and commands
+
+16. How do I see past chats with LAPI?  
+    *(History icon in LAPI app bar)*
+
+17. How do I delete all my chat history?  
+    *(Type /clear and send)*
+
+18. Are my chats saved?  
+    *(Yes, per user when signed in, in Firestore)*
+
+### Edge cases
+
+19. What categories can I report?  
+    *(Road damage, waste, lighting, etc. — from knowledge base if present)*
+
+20. Is LAPI's answer always long?  
+    *(No — replies should be under 60 words)*
+
+---
+
+## Quick RAG Prompts (copy-paste)
+
+- How do I report a pothole in LaporFix?
+- What is LAPI?
+- How do I check for a water cut?
+- Can I upload an image in chat?
+- How do I clear my chat history?
+- What happens after I submit a report?

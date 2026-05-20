@@ -1,0 +1,22 @@
+# Clear LAPI Chat History — /clear Command
+
+To delete ALL your saved LAPI chat sessions at once:
+
+1. Open the LAPI chatbot (tap the LAPI floating button).
+2. Type exactly: /clear
+3. Press send.
+
+What happens:
+- Every chat session linked to your user account is deleted from Firestore.
+- The current chat screen is cleared.
+- A snackbar tells you how many sessions were removed.
+
+Requirements:
+- You must be signed in for history to be stored and cleared.
+- The command is case-insensitive (/clear or /CLEAR both work).
+
+This is NOT the same as:
+- Deleting one old session from the history list (that only removes one session).
+- Clearing the text in the input box.
+
+If you want to start a fresh conversation without deleting all history, simply close and reopen LAPI — your past sessions remain in history until you use /clear.
