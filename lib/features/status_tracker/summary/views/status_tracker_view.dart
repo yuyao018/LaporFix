@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/button_add_fab.dart';
 import '../../../../widgets/main_appbar.dart';
+import '../../../issue_reporting/issue_reporting_page.dart';
 import '../../details/views/issue_details_page.dart';
 import '../data/status_tracker_repository.dart';
 import '../models/issue_summary.dart';
@@ -68,7 +69,14 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
           ),
           body: ColoredBox(color: AppTheme.mainBackground, child: _buildBody()),
           // add new issue here
-          floatingActionButton: ButtonAddFab(onPressed: () {}),
+          floatingActionButton: ButtonAddFab(
+            onPressed: () {
+              final route = MaterialPageRoute(
+                builder: (_) => const IssueReportingPage(),
+              );
+              Navigator.of(context).push(route);
+            },
+          ),
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerFloat,
         );
