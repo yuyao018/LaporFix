@@ -5,6 +5,7 @@ import '../../../../widgets/button_add_fab.dart';
 import '../../../../widgets/main_appbar.dart';
 import '../../../issue_reporting/issue_reporting_page.dart';
 import '../../details/views/issue_details_page.dart';
+import '../../insights/views/insights_page.dart';
 import '../data/status_tracker_repository.dart';
 import '../models/issue_summary.dart';
 import '../viewmodels/status_tracker_view_model.dart';
@@ -49,6 +50,12 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
     );
   }
 
+  void _openInsights() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const InsightsPage()));
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -63,7 +70,7 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
             showSearchBar: true,
             showFilter: true,
             filterList: _viewModel.filterLabels,
-            onInsightTap: () {},
+            onInsightTap: _openInsights,
             onSearchChanged: _viewModel.updateSearchQuery,
             onFilterChanged: _viewModel.updateStatusFilter,
           ),

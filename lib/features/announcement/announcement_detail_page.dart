@@ -50,7 +50,9 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Announcement'),
-        content: const Text('Are you sure you want to delete this announcement?'),
+        content: const Text(
+          'Are you sure you want to delete this announcement?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -82,9 +84,7 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
       appBar: FunctionAppBar(
         title: 'Announcement',
         showHistory: _isAdmin,
-        onHistoryTap: _isAdmin
-            ? () => _showAdminMenu(context)
-            : null,
+        onHistoryTap: _isAdmin ? () => _showAdminMenu(context) : null,
       ),
       body: Container(
         width: double.infinity,
@@ -122,9 +122,7 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
                 ? '${DateFormat('d MMMM yyyy').format(createdAt.toDate())}, ${DateFormat('h.mm').format(createdAt.toDate())}${DateFormat('a').format(createdAt.toDate()).toLowerCase().replaceAll('am', 'a.m.').replaceAll('pm', 'p.m.')}'
                 : '';
 
-            final locationStr = postcode.isNotEmpty
-                ? '$area, $postcode'
-                : area;
+            final locationStr = postcode.isNotEmpty ? '$area, $postcode' : area;
 
             return Column(
               children: [
@@ -201,8 +199,10 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Delete Announcement',
-                    style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Delete Announcement',
+                  style: TextStyle(color: Colors.red),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _deleteAnnouncement();
@@ -229,12 +229,12 @@ class _AnnouncementDetailPageState extends State<AnnouncementDetailPage> {
         .doc(widget.docId)
         .collection('comments')
         .add({
-      'text': message,
-      'userId': user.uid,
-      'userName': user.displayName ?? 'Anonymous',
-      'userPhoto': user.photoURL ?? '',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+          'text': message,
+          'userId': user.uid,
+          'userName': user.displayName ?? 'Anonymous',
+          'userPhoto': user.photoURL ?? '',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
   }
 }
 
@@ -281,16 +281,15 @@ class _DetailCard extends StatelessWidget {
           if (formattedDate.isNotEmpty)
             Text(
               formattedDate,
-              style: tt.bodySmall?.copyWith(color: _borderColor,
-                fontWeight: FontWeight.bold,),
+              style: tt.bodySmall?.copyWith(
+                color: _borderColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           const SizedBox(height: 8),
           Text(title, style: tt.titleLarge),
           const SizedBox(height: 8),
-          Text(
-            caption,
-            style: tt.bodyLarge?.copyWith(fontSize: 16),
-          ),
+          Text(caption, style: tt.bodyLarge?.copyWith(fontSize: 16)),
           const SizedBox(height: 12),
           Text(
             '${_capitalizeFirst(audience)} ~ $location',
@@ -393,8 +392,9 @@ class _CommentTile extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 20,
-          backgroundImage:
-              userPhoto.isNotEmpty ? NetworkImage(userPhoto) : null,
+          backgroundImage: userPhoto.isNotEmpty
+              ? NetworkImage(userPhoto)
+              : null,
           backgroundColor: AppTheme.surfaceGrey,
           child: userPhoto.isEmpty
               ? const Icon(Icons.person, color: AppTheme.textSecondary)
@@ -416,7 +416,10 @@ class _CommentTile extends StatelessWidget {
                   style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
-                Text(text, style: tt.bodySmall?.copyWith(color: AppTheme.textPrimary)),
+                Text(
+                  text,
+                  style: tt.bodySmall?.copyWith(color: AppTheme.textPrimary),
+                ),
               ],
             ),
           ),
@@ -455,7 +458,10 @@ class _AttachmentsSection extends StatelessWidget {
       children: [
         // ── Images ──
         if (images.isNotEmpty) ...[
-          Text('Images', style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            'Images',
+            style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
           SizedBox(
             height: 120,
@@ -492,7 +498,10 @@ class _AttachmentsSection extends StatelessWidget {
 
         // ── Videos ──
         if (videos.isNotEmpty) ...[
-          Text('Videos', style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            'Videos',
+            style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
           ...videos.map((v) {
             final video = v as Map;
@@ -501,23 +510,36 @@ class _AttachmentsSection extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => _openUrl(video['url'] ?? ''),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceGrey,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.videocam, color: AppTheme.primaryBlue, size: 20),
+                      const Icon(
+                        Icons.videocam,
+                        color: AppTheme.primaryBlue,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           video['name'] ?? 'Video',
-                          style: tt.bodySmall?.copyWith(color: AppTheme.textPrimary),
+                          style: tt.bodySmall?.copyWith(
+                            color: AppTheme.textPrimary,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(Icons.open_in_new, size: 16, color: AppTheme.accentBlue),
+                      const Icon(
+                        Icons.open_in_new,
+                        size: 16,
+                        color: AppTheme.accentBlue,
+                      ),
                     ],
                   ),
                 ),
@@ -528,7 +550,10 @@ class _AttachmentsSection extends StatelessWidget {
 
         // ── Documents ──
         if (docs.isNotEmpty) ...[
-          Text('Documents', style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            'Documents',
+            style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
           ...docs.map((d) {
             final doc = d as Map;
@@ -537,23 +562,36 @@ class _AttachmentsSection extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => _openUrl(doc['url'] ?? ''),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceGrey,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.description, color: AppTheme.primaryBlue, size: 20),
+                      const Icon(
+                        Icons.description,
+                        color: AppTheme.primaryBlue,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           doc['name'] ?? 'Document',
-                          style: tt.bodySmall?.copyWith(color: AppTheme.textPrimary),
+                          style: tt.bodySmall?.copyWith(
+                            color: AppTheme.textPrimary,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(Icons.open_in_new, size: 16, color: AppTheme.accentBlue),
+                      const Icon(
+                        Icons.open_in_new,
+                        size: 16,
+                        color: AppTheme.accentBlue,
+                      ),
                     ],
                   ),
                 ),
