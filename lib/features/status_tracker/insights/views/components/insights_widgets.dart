@@ -5,6 +5,12 @@ import 'package:flutter/material.dart';
 import '../../../../../theme/app_theme.dart';
 import '../../models/insights_models.dart';
 
+const double _insightsControlHeight = 32;
+const double _insightsControlInnerHeight = 26;
+const int _metricGridColumnCount = 3;
+const double _metricGridSpacing = 12;
+const double _compactMetricCardHeight = 76;
+
 // error view when Firestore cant provide insight data
 class InsightsErrorState extends StatelessWidget {
   const InsightsErrorState({
@@ -115,19 +121,61 @@ class InsightsMetricGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: metrics.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 1.05,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemBuilder: (context, index) {
-        return _MetricCard(metric: metrics[index]);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellWidth =
+            (constraints.maxWidth -
+                (_metricGridColumnCount - 1) * _metricGridSpacing) /
+            _metricGridColumnCount;
+        final rows = <List<InsightsMetric>>[
+          for (var index = 0; index < metrics.length; index += 3)
+            metrics
+                .skip(index)
+                .take(_metricGridColumnCount)
+                .toList(growable: false),
+        ];
+
+        return Column(
+          children: [
+            for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) ...[
+              _MetricGridRow(
+                metrics: rows[rowIndex],
+                height: rows[rowIndex].any((metric) => metric.hasTrend)
+                    ? cellWidth / 1.05
+                    : _compactMetricCardHeight,
+              ),
+              if (rowIndex != rows.length - 1)
+                const SizedBox(height: _metricGridSpacing),
+            ],
+          ],
+        );
       },
+    );
+  }
+}
+
+class _MetricGridRow extends StatelessWidget {
+  const _MetricGridRow({required this.metrics, required this.height});
+
+  final List<InsightsMetric> metrics;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: Row(
+        children: [
+          for (var index = 0; index < _metricGridColumnCount; index++) ...[
+            if (index > 0) const SizedBox(width: _metricGridSpacing),
+            Expanded(
+              child: index < metrics.length
+                  ? _MetricCard(metric: metrics[index])
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -170,7 +218,7 @@ class InsightsSectionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (trailing != null) trailing!,
+              ?trailing,
             ],
           ),
           const SizedBox(height: 12),
@@ -488,6 +536,83 @@ class InsightsAreaLimitDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _TopLimitDropdown(
+      value: value,
+      options: options,
+      onChanged: onChanged,
+    );
+  }
+}
+
+// selector (3, 5, 10, 20) for the Top Engagements card
+class InsightsEngagementLimitDropdown extends StatelessWidget {
+  const InsightsEngagementLimitDropdown({
+    super.key,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final int value;
+  final List<int> options;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TopLimitDropdown(
+      value: value,
+      options: options,
+      onChanged: onChanged,
+    );
+  }
+}
+
+// list for the highest-engagement issues in the selected period
+class InsightsTopEngagementList extends StatelessWidget {
+  const InsightsTopEngagementList({
+    super.key,
+    required this.items,
+    required this.showCategory,
+    required this.onItemTap,
+  });
+
+  final List<InsightsEngagementItem> items;
+  final bool showCategory;
+  final ValueChanged<InsightsEngagementItem> onItemTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const _EmptyChart(message: 'No engagement data');
+    }
+
+    return Column(
+      children: [
+        for (var index = 0; index < items.length; index++)
+          _TopEngagementRow(
+            item: items[index],
+            showCategory: showCategory,
+            onTap: onItemTap,
+            isLast: index == items.length - 1,
+          ),
+      ],
+    );
+  }
+}
+
+class _TopLimitDropdown extends StatelessWidget {
+  const _TopLimitDropdown({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final int value;
+  final List<int> options;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       height: 28,
       child: DecoratedBox(
@@ -516,6 +641,105 @@ class InsightsAreaLimitDropdown extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TopEngagementRow extends StatelessWidget {
+  const _TopEngagementRow({
+    required this.item,
+    required this.showCategory,
+    required this.onTap,
+    required this.isLast,
+  });
+
+  final InsightsEngagementItem item;
+  final bool showCategory;
+  final ValueChanged<InsightsEngagementItem> onTap;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = showCategory
+        ? '${item.category} • ${item.location}'
+        : item.location;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isLast ? Colors.transparent : const Color(0xFFDDE3EA),
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: isLast ? 0 : 9, top: isLast ? 0 : 1),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.thumb_up_alt_rounded,
+                        color: AppTheme.accentBlue,
+                        size: 15,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.likesCount.toString(),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.black,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Icon(
+                        Icons.comment_rounded,
+                        color: Color(0xFF18B86B),
+                        size: 15,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.commentsCount.toString(),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.black,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () => onTap(item),
+              constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+              padding: EdgeInsets.zero,
+              icon: const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.black,
+                size: 16,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -565,10 +789,12 @@ class _MetricCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 3),
-          _MetricTrendText(metric: metric),
-          const SizedBox(height: 1),
-          _MetricTrendPeriodText(periodLabel: metric.trendPeriodLabel),
+          if (metric.hasTrend) ...[
+            const SizedBox(height: 3),
+            _MetricTrendText(percent: metric.trendPercent!),
+            const SizedBox(height: 1),
+            _MetricTrendPeriodText(periodLabel: metric.trendPeriodLabel!),
+          ],
         ],
       ),
     );
@@ -577,14 +803,12 @@ class _MetricCard extends StatelessWidget {
 
 // percentage row for period trend change
 class _MetricTrendText extends StatelessWidget {
-  const _MetricTrendText({required this.metric});
+  const _MetricTrendText({required this.percent});
 
-  final InsightsMetric metric;
+  final int percent;
 
   @override
   Widget build(BuildContext context) {
-    final percent = metric.trendPercent;
-
     // percentage itself changes color
     final trendColor = percent > 0
         ? const Color(0xFF0B8F45)
@@ -642,31 +866,36 @@ class _InsightDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 160),
-      child: DecoratedBox(
-        decoration: const ShapeDecoration(
-          color: Color(0xFFA9D5FF),
-          shape: StadiumBorder(),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: values.contains(value) ? value : 'Overview',
-              isDense: true,
-              icon: const Icon(Icons.arrow_drop_down_rounded),
-              items: [
-                for (final item in values)
-                  DropdownMenuItem(value: item, child: Text(item)),
-              ],
-              onChanged: (next) {
-                if (next != null) onChanged(next);
-              },
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.black,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
+    return SizedBox(
+      height: _insightsControlHeight,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 140),
+        child: DecoratedBox(
+          decoration: const ShapeDecoration(
+            color: Color(0xFFA9D5FF),
+            shape: StadiumBorder(),
+          ),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
+            child: Center(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: values.contains(value) ? value : 'Overview',
+                  isDense: true,
+                  icon: const Icon(Icons.arrow_drop_down_rounded),
+                  items: [
+                    for (final item in values)
+                      DropdownMenuItem(value: item, child: Text(item)),
+                  ],
+                  onChanged: (next) {
+                    if (next != null) onChanged(next);
+                  },
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.black,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ),
           ),
@@ -688,44 +917,47 @@ class _PeriodSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        color: Colors.white.withValues(alpha: 0.68),
-        shape: const StadiumBorder(),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Row(
-          children: [
-            for (final period in InsightsPeriod.values)
-              Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(999),
-                  onTap: () => onChanged(period),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 140),
-                    height: 26,
-                    alignment: Alignment.center,
-                    decoration: ShapeDecoration(
-                      color: selectedPeriod == period
-                          ? const Color(0xFF9ACBFF)
-                          : Colors.transparent,
-                      shape: const StadiumBorder(),
-                    ),
-                    child: Text(
-                      period.label,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+    return SizedBox(
+      height: _insightsControlHeight,
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
+          color: Colors.white.withValues(alpha: 0.68),
+          shape: const StadiumBorder(),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Row(
+            children: [
+              for (final period in InsightsPeriod.values)
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: () => onChanged(period),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      height: _insightsControlInnerHeight,
+                      alignment: Alignment.center,
+                      decoration: ShapeDecoration(
                         color: selectedPeriod == period
-                            ? AppTheme.accentBlue
-                            : Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                            ? const Color(0xFF9ACBFF)
+                            : Colors.transparent,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: Text(
+                        period.label,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: selectedPeriod == period
+                              ? AppTheme.accentBlue
+                              : Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

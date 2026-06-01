@@ -47,8 +47,8 @@ class IssueSummary {
   DateTime? get latestStatusChangedAt {
     final dates = [
       ...statusChangedAt.whereType<DateTime>(),
-      if (completionProof.completedAt != null) completionProof.completedAt!,
-      if (createdAt != null) createdAt!,
+      ?completionProof.completedAt,
+      ?createdAt,
     ];
     if (dates.isEmpty) return null;
     // compare

@@ -7,16 +7,18 @@ class InsightsMetric {
     required this.value,
     required this.icon,
     required this.color,
-    required this.trendPercent,
-    required this.trendPeriodLabel,
+    this.trendPercent,
+    this.trendPeriodLabel,
   });
 
   final String label;
   final String value;
   final IconData icon;
   final Color color;
-  final int trendPercent;
-  final String trendPeriodLabel;
+  final int? trendPercent;
+  final String? trendPeriodLabel;
+
+  bool get hasTrend => trendPercent != null && trendPeriodLabel != null;
 }
 
 // 1 row of a categorical count chart
@@ -64,6 +66,26 @@ class InsightsAreaItem {
   final String area;
   final int count;
   final Color color;
+}
+
+// one issue row for the Top Engagements card
+class InsightsEngagementItem {
+  const InsightsEngagementItem({
+    required this.issueId,
+    required this.category,
+    required this.location,
+    required this.likesCount,
+    required this.commentsCount,
+  });
+
+  final String issueId;
+  final String category;
+  final String location;
+  final int likesCount;
+  final int commentsCount;
+
+  // total engagement is only used for sorting/ranking the rows
+  int get totalEngagement => likesCount + commentsCount;
 }
 
 // small summary card that highlights most important insight
@@ -118,6 +140,7 @@ class OverviewInsights {
     required this.averageResolutionByCategory,
     required this.keyFinding,
     required this.mostActiveArea,
+    required this.topEngagements,
   });
 
   final List<InsightsMetric> metrics;
@@ -126,6 +149,7 @@ class OverviewInsights {
   final List<InsightsResolutionItem> averageResolutionByCategory;
   final InsightsKeyFinding keyFinding;
   final InsightsActiveArea mostActiveArea;
+  final List<InsightsEngagementItem> topEngagements;
 }
 
 // for one selected category
@@ -136,6 +160,7 @@ class CategoryInsights {
     required this.areaBreakdown,
     required this.complaintsOverTime,
     required this.mostActiveArea,
+    required this.topEngagements,
   });
 
   final String category;
@@ -143,6 +168,7 @@ class CategoryInsights {
   final List<InsightsAreaItem> areaBreakdown;
   final List<InsightsTimeBucket> complaintsOverTime;
   final InsightsActiveArea mostActiveArea;
+  final List<InsightsEngagementItem> topEngagements;
 }
 
 // insight period predefined buckets

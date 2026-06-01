@@ -64,7 +64,12 @@ class InsightsView extends StatelessWidget {
           // null category means Overview
           // else display own dashboard
           if (dataset.categoryDetail == null)
-            _OverviewContent(dataset: dataset)
+            _OverviewContent(
+              dataset: dataset,
+              engagementLimit: viewModel.engagementLimit,
+              engagementLimitOptions: viewModel.engagementLimitOptions,
+              onEngagementLimitChanged: viewModel.updateEngagementLimit,
+            )
           else
             _CategoryContent(
               dataset: dataset,
@@ -72,6 +77,9 @@ class InsightsView extends StatelessWidget {
               areaLimitOptions: viewModel.areaLimitOptions,
               visibleAreas: viewModel.visibleAreaBreakdown,
               onAreaLimitChanged: viewModel.updateAreaLimit,
+              engagementLimit: viewModel.engagementLimit,
+              engagementLimitOptions: viewModel.engagementLimitOptions,
+              onEngagementLimitChanged: viewModel.updateEngagementLimit,
             ),
         ],
       ),
@@ -85,13 +93,24 @@ class InsightsView extends StatelessWidget {
 // - time trend
 // - strongest location signal
 class _OverviewContent extends StatelessWidget {
-  const _OverviewContent({required this.dataset});
+  const _OverviewContent({
+    required this.dataset,
+    required this.engagementLimit,
+    required this.engagementLimitOptions,
+    required this.onEngagementLimitChanged,
+  });
 
   final InsightsDataset dataset;
+  final int engagementLimit;
+  final List<int> engagementLimitOptions;
+  final ValueChanged<int> onEngagementLimitChanged;
 
   @override
   Widget build(BuildContext context) {
     final overview = dataset.overview;
+    final visibleEngagements = overview.topEngagements
+        .take(engagementLimit)
+        .toList(growable: false);
 
     return Column(
       children: [
@@ -146,6 +165,21 @@ class _OverviewContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         InsightsActiveAreaCard(activeArea: overview.mostActiveArea),
+        const SizedBox(height: 16),
+        InsightsSectionCard(
+          title: 'Top Engagements',
+          icon: Icons.forum_rounded,
+          trailing: InsightsEngagementLimitDropdown(
+            value: engagementLimit,
+            options: engagementLimitOptions,
+            onChanged: onEngagementLimitChanged,
+          ),
+          child: InsightsTopEngagementList(
+            items: visibleEngagements,
+            showCategory: true,
+            onItemTap: (_) {},
+          ),
+        ),
       ],
     );
   }
@@ -162,6 +196,9 @@ class _CategoryContent extends StatelessWidget {
     required this.areaLimitOptions,
     required this.visibleAreas,
     required this.onAreaLimitChanged,
+    required this.engagementLimit,
+    required this.engagementLimitOptions,
+    required this.onEngagementLimitChanged,
   });
 
   final InsightsDataset dataset;
@@ -169,10 +206,16 @@ class _CategoryContent extends StatelessWidget {
   final List<int> areaLimitOptions;
   final List<InsightsAreaItem> visibleAreas;
   final ValueChanged<int> onAreaLimitChanged;
+  final int engagementLimit;
+  final List<int> engagementLimitOptions;
+  final ValueChanged<int> onEngagementLimitChanged;
 
   @override
   Widget build(BuildContext context) {
     final detail = dataset.categoryDetail!;
+    final visibleEngagements = detail.topEngagements
+        .take(engagementLimit)
+        .toList(growable: false);
 
     return Column(
       children: [
@@ -196,6 +239,21 @@ class _CategoryContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         InsightsActiveAreaCard(activeArea: detail.mostActiveArea),
+        const SizedBox(height: 16),
+        InsightsSectionCard(
+          title: 'Top Engagements (${detail.category})',
+          icon: Icons.forum_rounded,
+          trailing: InsightsEngagementLimitDropdown(
+            value: engagementLimit,
+            options: engagementLimitOptions,
+            onChanged: onEngagementLimitChanged,
+          ),
+          child: InsightsTopEngagementList(
+            items: visibleEngagements,
+            showCategory: false,
+            onItemTap: (_) {},
+          ),
+        ),
       ],
     );
   }

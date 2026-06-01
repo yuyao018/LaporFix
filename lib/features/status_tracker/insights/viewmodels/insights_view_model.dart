@@ -32,6 +32,9 @@ class InsightsViewModel extends ChangeNotifier {
   // default area limit selection
   int _areaLimit = 10;
 
+  // default engagement ranking limit selection
+  int _engagementLimit = 5;
+
   InsightsPeriod get selectedPeriod => _selectedPeriod;
   String? get selectedCategory => _selectedCategory;
   String get selectedFilterLabel => _selectedCategory ?? 'Overview';
@@ -41,6 +44,8 @@ class InsightsViewModel extends ChangeNotifier {
   bool get isOverview => _selectedCategory == null;
   int get areaLimit => _areaLimit;
   List<int> get areaLimitOptions => const [5, 10, 20];
+  int get engagementLimit => _engagementLimit;
+  List<int> get engagementLimitOptions => const [3, 5, 10, 20];
 
   List<String> get filterLabels => ['Overview', ..._categoryLabels];
 
@@ -59,7 +64,7 @@ class InsightsViewModel extends ChangeNotifier {
       previousRange.start,
       previousRange.end,
     );
-    final overview = _buildOverview(periodIssues, previousIssues, now);
+    final overview = _buildOverview(periodIssues, now);
     final category = _selectedCategory;
 
     return InsightsDataset(
@@ -126,6 +131,13 @@ class InsightsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // when user selects a different Top N limit for engagement rows
+  void updateEngagementLimit(int limit) {
+    if (_engagementLimit == limit) return;
+    _engagementLimit = limit;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();
@@ -165,27 +177,14 @@ class InsightsViewModel extends ChangeNotifier {
   }
 
   // for build overview cards and charts
-  OverviewInsights _buildOverview(
-    List<IssueSummary> issues,
-    List<IssueSummary> previousIssues,
-    DateTime now,
-  ) {
+  OverviewInsights _buildOverview(List<IssueSummary> issues, DateTime now) {
     final categoryBreakdown = _categoryBreakdown(issues);
     final topCategory = categoryBreakdown.isEmpty
         ? null
         : categoryBreakdown.first;
     final unresolvedCount = _unresolvedCount(issues);
-    final previousUnresolvedCount = _unresolvedCount(previousIssues);
     final solvedCount = _statusCount(issues, IssueStatus.completed);
-    final previousSolvedCount = _statusCount(
-      previousIssues,
-      IssueStatus.completed,
-    );
     final inProgressCount = _statusCount(issues, IssueStatus.inProgress);
-    final previousInProgressCount = _statusCount(
-      previousIssues,
-      IssueStatus.inProgress,
-    );
 
     return OverviewInsights(
       metrics: [
@@ -195,8 +194,6 @@ class InsightsViewModel extends ChangeNotifier {
           value: unresolvedCount.toString(),
           icon: Icons.warning_amber_rounded,
           color: const Color(0xFFFF3B30),
-          trendPercent: _trendPercent(unresolvedCount, previousUnresolvedCount),
-          trendPeriodLabel: _selectedPeriod.label,
         ),
         // solved
         InsightsMetric(
@@ -204,8 +201,6 @@ class InsightsViewModel extends ChangeNotifier {
           value: solvedCount.toString(),
           icon: Icons.check_circle_outline_rounded,
           color: const Color(0xFF18B86B),
-          trendPercent: _trendPercent(solvedCount, previousSolvedCount),
-          trendPeriodLabel: _selectedPeriod.label,
         ),
         // in progress
         InsightsMetric(
@@ -213,8 +208,6 @@ class InsightsViewModel extends ChangeNotifier {
           value: inProgressCount.toString(),
           icon: Icons.double_arrow_rounded,
           color: const Color(0xFF0084FF),
-          trendPercent: _trendPercent(inProgressCount, previousInProgressCount),
-          trendPeriodLabel: _selectedPeriod.label,
         ),
       ],
       categoryBreakdown: categoryBreakdown,
@@ -222,6 +215,7 @@ class InsightsViewModel extends ChangeNotifier {
       averageResolutionByCategory: _averageResolutionByCategory(issues),
       keyFinding: _keyFinding(topCategory, issues.length),
       mostActiveArea: _mostActiveArea(issues),
+      topEngagements: _topEngagements(issues),
     );
   }
 
@@ -243,17 +237,8 @@ class InsightsViewModel extends ChangeNotifier {
     final stats = _durationStats(durations);
     final previousStats = _durationStats(previousDurations);
     final unresolvedCount = _unresolvedCount(issues);
-    final previousUnresolvedCount = _unresolvedCount(previousIssues);
     final solvedCount = _statusCount(issues, IssueStatus.completed);
-    final previousSolvedCount = _statusCount(
-      previousIssues,
-      IssueStatus.completed,
-    );
     final inProgressCount = _statusCount(issues, IssueStatus.inProgress);
-    final previousInProgressCount = _statusCount(
-      previousIssues,
-      IssueStatus.inProgress,
-    );
 
     return CategoryInsights(
       category: category,
@@ -264,8 +249,6 @@ class InsightsViewModel extends ChangeNotifier {
           value: unresolvedCount.toString(),
           icon: Icons.warning_amber_rounded,
           color: const Color(0xFFFF3B30),
-          trendPercent: _trendPercent(unresolvedCount, previousUnresolvedCount),
-          trendPeriodLabel: _selectedPeriod.label,
         ),
         // solved
         InsightsMetric(
@@ -273,8 +256,6 @@ class InsightsViewModel extends ChangeNotifier {
           value: solvedCount.toString(),
           icon: Icons.check_circle_outline_rounded,
           color: const Color(0xFF18B86B),
-          trendPercent: _trendPercent(solvedCount, previousSolvedCount),
-          trendPeriodLabel: _selectedPeriod.label,
         ),
         // in progress
         InsightsMetric(
@@ -282,8 +263,6 @@ class InsightsViewModel extends ChangeNotifier {
           value: inProgressCount.toString(),
           icon: Icons.double_arrow_rounded,
           color: const Color(0xFF0084FF),
-          trendPercent: _trendPercent(inProgressCount, previousInProgressCount),
-          trendPeriodLabel: _selectedPeriod.label,
         ),
         // longest waiting time
         InsightsMetric(
@@ -325,6 +304,7 @@ class InsightsViewModel extends ChangeNotifier {
       areaBreakdown: _areaBreakdown(issues),
       complaintsOverTime: _timeBuckets(issues, now, _selectedPeriod),
       mostActiveArea: _mostActiveArea(issues),
+      topEngagements: _topEngagements(issues),
     );
   }
 
@@ -380,6 +360,52 @@ class InsightsViewModel extends ChangeNotifier {
           area: entries[index].key,
           count: entries[index].value,
           color: _chartColor(index),
+        ),
+    ];
+  }
+
+  // ranks issue rows by engagement for the selected period.
+  // status is intentionally not filtered here, only deleted issues are excluded
+  // before this method is called.
+  List<InsightsEngagementItem> _topEngagements(List<IssueSummary> issues) {
+    final entries = issues.toList(growable: false)
+      ..sort((left, right) {
+        final leftTotal =
+            left.engagement.likesCount + left.engagement.commentCount;
+        final rightTotal =
+            right.engagement.likesCount + right.engagement.commentCount;
+        final totalCompare = rightTotal.compareTo(leftTotal);
+        if (totalCompare != 0) return totalCompare;
+
+        final commentsCompare = right.engagement.commentCount.compareTo(
+          left.engagement.commentCount,
+        );
+        if (commentsCompare != 0) return commentsCompare;
+
+        final likesCompare = right.engagement.likesCount.compareTo(
+          left.engagement.likesCount,
+        );
+        if (likesCompare != 0) return likesCompare;
+
+        final rightDate = right.latestStatusChangedAt;
+        final leftDate = left.latestStatusChangedAt;
+        if (rightDate != null && leftDate != null) {
+          return rightDate.compareTo(leftDate);
+        }
+        if (rightDate != null) return 1;
+        if (leftDate != null) return -1;
+
+        return right.id.compareTo(left.id);
+      });
+
+    return [
+      for (final issue in entries)
+        InsightsEngagementItem(
+          issueId: issue.id,
+          category: issue.category,
+          location: issue.location.displayName,
+          likesCount: issue.engagement.likesCount,
+          commentsCount: issue.engagement.commentCount,
         ),
     ];
   }
