@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:group2_urbanfix/features/issue_reporting/issue_reporting_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../theme/app_theme.dart';
@@ -14,7 +15,6 @@ import 'models/disruption_notice.dart';
 import 'services/chatbot_service.dart';
 import 'widgets/card.dart';
 import 'widgets/disruption_notice_card.dart';
-import '../issue_reporting/issue_reporting_page.dart';
 import '../../../widgets/button.dart';
 
 // ── Chat list item: either a real message or a date-separator header ──────────
@@ -33,7 +33,7 @@ class _DateHeader extends _ChatItem {
 class _TicketItem extends _ChatItem {
   final String ticketId;
   final String category;
-  final String status;       // 'submitted' | 'in_progress' | 'resolved'
+  final String status; // 'submitted' | 'in_progress' | 'resolved'
   final String? expectedFixDate;
   final String? title;
   final String? description;
@@ -58,7 +58,11 @@ class _Attachment {
   final String name;
   final String path;
   final _AttachType type;
-  const _Attachment({required this.name, required this.path, required this.type});
+  const _Attachment({
+    required this.name,
+    required this.path,
+    required this.type,
+  });
 }
 
 class ChatbotPage extends StatefulWidget {
@@ -107,8 +111,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
     final timeOfDay = hour < 12
         ? 'Morning'
         : hour < 17
-            ? 'Afternoon'
-            : 'Evening';
+        ? 'Afternoon'
+        : 'Evening';
     return 'Good $timeOfDay, $name!';
   }
 
@@ -208,7 +212,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
       } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not upload image. Please try again.')),
+            const SnackBar(
+              content: Text('Could not upload image. Please try again.'),
+            ),
           );
         }
         return;
@@ -224,12 +230,16 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
     setState(() {
       _hasStartedChat = true;
-      _items.add(_MessageItem(ChatMessage(
-        text: displayText,
-        role: MessageRole.user,
-        timestamp: DateTime.now(),
-        imageUrl: uploadedImageUrl,
-      )));
+      _items.add(
+        _MessageItem(
+          ChatMessage(
+            text: displayText,
+            role: MessageRole.user,
+            timestamp: DateTime.now(),
+            imageUrl: uploadedImageUrl,
+          ),
+        ),
+      );
       _isLoading = true;
     });
     _scrollToBottom();
@@ -261,20 +271,29 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
       setState(() {
         _sessionId = result['session_id'];
-        _items.add(_MessageItem(ChatMessage(
-          text: answer,
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-          showReportButton: showReportIssueButton,
-        )));
+        _items.add(
+          _MessageItem(
+            ChatMessage(
+              text: answer,
+              role: MessageRole.assistant,
+              timestamp: DateTime.now(),
+              showReportButton: showReportIssueButton,
+            ),
+          ),
+        );
       });
     } catch (e) {
       setState(() {
-        _items.add(_MessageItem(ChatMessage(
-          text: 'Sorry, I could not connect to the server. Please try again.',
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-        )));
+        _items.add(
+          _MessageItem(
+            ChatMessage(
+              text:
+                  'Sorry, I could not connect to the server. Please try again.',
+              role: MessageRole.assistant,
+              timestamp: DateTime.now(),
+            ),
+          ),
+        );
       });
     } finally {
       setState(() => _isLoading = false);
@@ -287,11 +306,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null || !mounted) return;
-    setState(() => _pendingAttachment = _Attachment(
-          name: picked.name,
-          path: picked.path,
-          type: _AttachType.image,
-        ));
+    setState(
+      () => _pendingAttachment = _Attachment(
+        name: picked.name,
+        path: picked.path,
+        type: _AttachType.image,
+      ),
+    );
   }
 
   Future<void> _pickDocument() async {
@@ -301,11 +322,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
     if (result == null || result.files.isEmpty || !mounted) return;
     final file = result.files.first;
-    setState(() => _pendingAttachment = _Attachment(
-          name: file.name,
-          path: file.path ?? '',
-          type: _AttachType.doc,
-        ));
+    setState(
+      () => _pendingAttachment = _Attachment(
+        name: file.name,
+        path: file.path ?? '',
+        type: _AttachType.doc,
+      ),
+    );
   }
 
   Future<void> _fetchUserLocation() async {
@@ -329,11 +352,15 @@ class _ChatbotPageState extends State<ChatbotPage> {
     // Show the user's question as a chat bubble immediately
     setState(() {
       _hasStartedChat = true;
-      _items.add(_MessageItem(ChatMessage(
-        text: 'Check for water/power cut',
-        role: MessageRole.user,
-        timestamp: DateTime.now(),
-      )));
+      _items.add(
+        _MessageItem(
+          ChatMessage(
+            text: 'Check for water/power cut',
+            role: MessageRole.user,
+            timestamp: DateTime.now(),
+          ),
+        ),
+      );
       _isLoading = true;
     });
     _scrollToBottom();
@@ -346,11 +373,26 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
       // Keywords that indicate a water, power, or road disruption
       const disruptionKeywords = [
-        'water', 'air', 'bekalan air',
-        'power', 'electric', 'elektrik', 'tenaga', 'tnb',
-        'road', 'jalan', 'highway', 'construction', 'traffic',
-        'outage', 'disruption', 'gangguan', 'cut', 'putus',
-        'maintenance', 'penyelenggaraan',
+        'water',
+        'air',
+        'bekalan air',
+        'power',
+        'electric',
+        'elektrik',
+        'tenaga',
+        'tnb',
+        'road',
+        'jalan',
+        'highway',
+        'construction',
+        'traffic',
+        'outage',
+        'disruption',
+        'gangguan',
+        'cut',
+        'putus',
+        'maintenance',
+        'penyelenggaraan',
       ];
 
       final userArea = _userArea.toLowerCase();
@@ -369,9 +411,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
         final annState = (location['state'] ?? '').toString().toLowerCase();
         final annFull = (location['full'] ?? '').toString().toLowerCase();
 
-        bool locationMatch = userArea.isEmpty && userState.isEmpty; // show all if no location set
+        bool locationMatch =
+            userArea.isEmpty &&
+            userState.isEmpty; // show all if no location set
         if (!locationMatch && userArea.isNotEmpty) {
-          locationMatch = annArea == userArea ||
+          locationMatch =
+              annArea == userArea ||
               annFull.contains(userArea) ||
               annArea.contains(userArea);
         }
@@ -385,7 +430,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
         final caption = (data['caption'] ?? '').toString().toLowerCase();
         final combined = '$title $caption';
 
-        final isDisruption = disruptionKeywords.any((kw) => combined.contains(kw));
+        final isDisruption = disruptionKeywords.any(
+          (kw) => combined.contains(kw),
+        );
         if (!isDisruption) continue;
 
         matches.add(data);
@@ -399,12 +446,14 @@ class _ChatbotPageState extends State<ChatbotPage> {
         final location = userArea.isNotEmpty
             ? userArea
             : userState.isNotEmpty
-                ? userState
-                : 'your area';
+            ? userState
+            : 'your area';
         final reply =
             '✅ No water, power, or road maintenance announcements found for $location at the moment.\n\n'
             'If you are experiencing an issue, you can report it directly through the app.';
-        assistantPayloads = [{'content': reply}];
+        assistantPayloads = [
+          {'content': reply},
+        ];
         assistantMessages = [
           ChatMessage(
             text: reply,
@@ -419,12 +468,14 @@ class _ChatbotPageState extends State<ChatbotPage> {
         for (final data in matches) {
           final notice = DisruptionNotice.fromAnnouncement(data);
           assistantPayloads.add({'disruption_notice': notice.toJson()});
-          assistantMessages.add(ChatMessage(
-            text: '',
-            role: MessageRole.assistant,
-            timestamp: now,
-            disruptionNotice: notice,
-          ));
+          assistantMessages.add(
+            ChatMessage(
+              text: '',
+              role: MessageRole.assistant,
+              timestamp: now,
+              disruptionNotice: notice,
+            ),
+          );
         }
       }
 
@@ -441,16 +492,22 @@ class _ChatbotPageState extends State<ChatbotPage> {
       const errorText =
           'Sorry, I could not check announcements right now. Please try again.';
       setState(() {
-        _items.add(_MessageItem(ChatMessage(
-          text: errorText,
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-        )));
+        _items.add(
+          _MessageItem(
+            ChatMessage(
+              text: errorText,
+              role: MessageRole.assistant,
+              timestamp: DateTime.now(),
+            ),
+          ),
+        );
       });
       try {
         _sessionId = await _service.saveTurn(
           userMessage: 'Check for water/power cut',
-          assistantMessages: [{'content': errorText}],
+          assistantMessages: [
+            {'content': errorText},
+          ],
           sessionId: _sessionId,
         );
       } catch (_) {}
@@ -466,11 +523,15 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
     setState(() {
       _hasStartedChat = true;
-      _items.add(_MessageItem(ChatMessage(
-        text: 'Track my existing ticket',
-        role: MessageRole.user,
-        timestamp: DateTime.now(),
-      )));
+      _items.add(
+        _MessageItem(
+          ChatMessage(
+            text: 'Track my existing ticket',
+            role: MessageRole.user,
+            timestamp: DateTime.now(),
+          ),
+        ),
+      );
       _isLoading = true;
     });
     _scrollToBottom();
@@ -479,16 +540,22 @@ class _ChatbotPageState extends State<ChatbotPage> {
       if (user == null) {
         const reply = 'You need to be logged in to check your tickets.';
         setState(() {
-          _items.add(_MessageItem(ChatMessage(
-            text: reply,
-            role: MessageRole.assistant,
-            timestamp: DateTime.now(),
-          )));
+          _items.add(
+            _MessageItem(
+              ChatMessage(
+                text: reply,
+                role: MessageRole.assistant,
+                timestamp: DateTime.now(),
+              ),
+            ),
+          );
         });
         try {
           _sessionId = await _service.saveTurn(
             userMessage: 'Track my existing ticket',
-            assistantMessages: [{'content': reply}],
+            assistantMessages: [
+              {'content': reply},
+            ],
             sessionId: _sessionId,
           );
         } catch (_) {}
@@ -503,33 +570,46 @@ class _ChatbotPageState extends State<ChatbotPage> {
           .get();
 
       // Filter open tickets — match any non-resolved status regardless of casing/spacing
-      final docs = snapshot.docs.where((doc) {
-        final s = (doc.data()['status'] ?? '').toString().toLowerCase().trim();
-        return s != 'resolved' && s != 'completed' && s != 'closed' && s.isNotEmpty;
-      }).toList()
-        ..sort((a, b) {
-          final ta = a.data()['createdAt'];
-          final tb = b.data()['createdAt'];
-          if (ta is Timestamp && tb is Timestamp) {
-            return tb.compareTo(ta); // newest first
-          }
-          return 0;
-        });
+      final docs =
+          snapshot.docs.where((doc) {
+            final s = (doc.data()['status'] ?? '')
+                .toString()
+                .toLowerCase()
+                .trim();
+            return s != 'resolved' &&
+                s != 'completed' &&
+                s != 'closed' &&
+                s.isNotEmpty;
+          }).toList()..sort((a, b) {
+            final ta = a.data()['createdAt'];
+            final tb = b.data()['createdAt'];
+            if (ta is Timestamp && tb is Timestamp) {
+              return tb.compareTo(ta); // newest first
+            }
+            return 0;
+          });
 
       if (docs.isEmpty) {
-        const reply = '✅ You have no open tickets at the moment.\n\n'
+        const reply =
+            '✅ You have no open tickets at the moment.\n\n'
             'If you have an issue to report, tap the **Report Issue** button to get started.';
         setState(() {
-          _items.add(_MessageItem(ChatMessage(
-            text: reply,
-            role: MessageRole.assistant,
-            timestamp: DateTime.now(),
-          )));
+          _items.add(
+            _MessageItem(
+              ChatMessage(
+                text: reply,
+                role: MessageRole.assistant,
+                timestamp: DateTime.now(),
+              ),
+            ),
+          );
         });
         try {
           _sessionId = await _service.saveTurn(
             userMessage: 'Track my existing ticket',
-            assistantMessages: [{'content': reply}],
+            assistantMessages: [
+              {'content': reply},
+            ],
             sessionId: _sessionId,
           );
         } catch (_) {}
@@ -547,11 +627,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
       // Header
       assistantPayloads.add({'content': headerText});
-      assistantMessages.add(ChatMessage(
-        text: headerText,
-        role: MessageRole.assistant,
-        timestamp: now,
-      ));
+      assistantMessages.add(
+        ChatMessage(
+          text: headerText,
+          role: MessageRole.assistant,
+          timestamp: now,
+        ),
+      );
 
       for (final doc in docs) {
         final data = doc.data();
@@ -563,15 +645,29 @@ class _ChatbotPageState extends State<ChatbotPage> {
         final fixTs = data['estimatedResolutionAt'];
         if (fixTs is Timestamp) {
           final dt = fixTs.toDate();
-          const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const months = [
+            '',
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec',
+          ];
           fixDate = '${dt.day} ${months[dt.month]} ${dt.year}';
         } else if (fixTs is String && fixTs.isNotEmpty) {
           fixDate = fixTs;
         }
 
         final ticketId = (data['ticketId'] ?? doc.id.substring(0, 8))
-            .toString().toUpperCase();
+            .toString()
+            .toUpperCase();
         final category = (data['category'] ?? 'Issue').toString();
         final title = (data['title'] ?? '').toString();
         final description = (data['description'] ?? '').toString();
@@ -628,16 +724,22 @@ class _ChatbotPageState extends State<ChatbotPage> {
       const errorText =
           'Could not retrieve your tickets right now. Please check the My Reports section directly.';
       setState(() {
-        _items.add(_MessageItem(ChatMessage(
-          text: errorText,
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-        )));
+        _items.add(
+          _MessageItem(
+            ChatMessage(
+              text: errorText,
+              role: MessageRole.assistant,
+              timestamp: DateTime.now(),
+            ),
+          ),
+        );
       });
       try {
         _sessionId = await _service.saveTurn(
           userMessage: 'Track my existing ticket',
-          assistantMessages: [{'content': errorText}],
+          assistantMessages: [
+            {'content': errorText},
+          ],
           sessionId: _sessionId,
         );
       } catch (_) {}
@@ -679,9 +781,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
         final messages = allMessages[i];
         if (messages.isEmpty) continue;
 
-        final sessionTime = session.updatedAt ??
-            session.createdAt ??
-            messages.first.timestamp;
+        final sessionTime =
+            session.updatedAt ?? session.createdAt ?? messages.first.timestamp;
 
         historyItems.add(_DateHeader(sessionTime));
         historyItems.addAll(messages.map(_MessageItem.new));
@@ -690,7 +791,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
       if (historyItems.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No messages found in past sessions.')),
+            const SnackBar(
+              content: Text('No messages found in past sessions.'),
+            ),
           );
         }
         return;
@@ -712,9 +815,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not load history: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not load history: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoadingHistory = false);
@@ -736,9 +839,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.functionBackground,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.functionBackground),
         child: Column(
           children: [
             // ── Chat area ──────────────────────────────────────────
@@ -764,12 +865,16 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   alignment: Alignment.centerLeft,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEEF1FE),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: const Color(0xFF5F80F8), width: 1),
+                        color: const Color(0xFF5F80F8),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -784,8 +889,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                         const SizedBox(width: 6),
                         ConstrainedBox(
                           constraints: BoxConstraints(
-                            maxWidth:
-                                MediaQuery.of(context).size.width * 0.55,
+                            maxWidth: MediaQuery.of(context).size.width * 0.55,
                           ),
                           child: Text(
                             _pendingAttachment!.name,
@@ -801,8 +905,11 @@ class _ChatbotPageState extends State<ChatbotPage> {
                         GestureDetector(
                           onTap: () =>
                               setState(() => _pendingAttachment = null),
-                          child: const Icon(Icons.close,
-                              size: 14, color: Color(0xFF5F80F8)),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Color(0xFF5F80F8),
+                          ),
                         ),
                       ],
                     ),
@@ -833,8 +940,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
         const SizedBox(height: 20),
         Text(
           _greeting,
-          style: textTheme.titleLarge
-              ?.copyWith(color: Colors.white, fontSize: 24),
+          style: textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            fontSize: 24,
+          ),
         ),
         const SizedBox(height: 40),
         ..._suggestions.map(
@@ -870,12 +979,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
           _MessageItem(:final message) => _ChatBubble(message: message),
           _DateHeader(:final sessionTime) => _SessionDivider(time: sessionTime),
           _TicketItem() => Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                child: _TicketCard(ticket: item),
-              ),
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: _TicketCard(ticket: item),
             ),
+          ),
         };
       },
     );
@@ -888,8 +997,19 @@ class _SessionDivider extends StatelessWidget {
   const _SessionDivider({required this.time});
 
   static const _months = [
-    '', 'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    '',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   String _format() {
@@ -902,11 +1022,11 @@ class _SessionDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final labelStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-          fontSize: 12,
-          color: AppTheme.textOnGradient.withValues(alpha: 0.85),
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.3,
-        );
+      fontSize: 12,
+      color: AppTheme.textOnGradient.withValues(alpha: 0.85),
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.3,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -964,7 +1084,9 @@ class _ChatBubble extends StatelessWidget {
     var lastEnd = 0;
     for (final match in _boldPattern.allMatches(text)) {
       if (match.start > lastEnd) {
-        spans.add(TextSpan(text: text.substring(lastEnd, match.start), style: base));
+        spans.add(
+          TextSpan(text: text.substring(lastEnd, match.start), style: base),
+        );
       }
       spans.add(TextSpan(text: match.group(1), style: bold));
       lastEnd = match.end;
@@ -1042,7 +1164,7 @@ class _ChatBubble extends StatelessWidget {
                         child: CircularProgressIndicator(
                           value: progress.expectedTotalBytes != null
                               ? progress.cumulativeBytesLoaded /
-                                  progress.expectedTotalBytes!
+                                    progress.expectedTotalBytes!
                               : null,
                         ),
                       ),
@@ -1052,7 +1174,10 @@ class _ChatBubble extends StatelessWidget {
                     height: 120,
                     alignment: Alignment.center,
                     color: AppTheme.surfaceGrey,
-                    child: const Icon(Icons.broken_image, color: AppTheme.textSecondary),
+                    child: const Icon(
+                      Icons.broken_image,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
               ),
@@ -1068,7 +1193,8 @@ class _ChatBubble extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const IssueReportingPage()),
+                      builder: (context) => const IssueReportingPage(),
+                    ),
                   );
                 },
               ),
@@ -1130,8 +1256,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
               mainAxisSize: MainAxisSize.min,
               children: List.generate(3, (i) {
                 final delay = i / 3;
-                final opacity =
-                    ((_controller.value - delay) % 1.0).clamp(0.0, 1.0);
+                final opacity = ((_controller.value - delay) % 1.0).clamp(
+                  0.0,
+                  1.0,
+                );
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   width: 8,
@@ -1195,10 +1323,7 @@ class _TicketCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Category: ${ticket.category}',
-            style: const TextStyle(
-              fontSize: 16,
-              color: Color(0xFF4B5563),
-            ),
+            style: const TextStyle(fontSize: 16, color: Color(0xFF4B5563)),
           ),
           const SizedBox(height: 12),
 
@@ -1232,7 +1357,9 @@ class _TicketCard extends StatelessWidget {
                   RichText(
                     text: TextSpan(
                       style: const TextStyle(
-                          fontSize: 16, color: Color(0xFF4B5563)),
+                        fontSize: 16,
+                        color: Color(0xFF4B5563),
+                      ),
                       children: [
                         const TextSpan(
                           text: 'Expected Fix Date: ',
@@ -1254,7 +1381,8 @@ class _TicketCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (ticket.description != null && ticket.description!.isNotEmpty) ...[
+                if (ticket.description != null &&
+                    ticket.description!.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
                     ticket.description!,
@@ -1271,20 +1399,24 @@ class _TicketCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.location_on_outlined,
-                          size: 20, color: Color(0xFFFF0000)),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 20,
+                        color: Color(0xFFFF0000),
+                      ),
                       const SizedBox(width: 2),
                       Expanded(
                         child: Text(
                           ticket.location!,
                           style: const TextStyle(
-                              fontSize: 16, color: Color(0xFF000000)),
+                            fontSize: 16,
+                            color: Color(0xFF000000),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ],
-
               ],
             ),
           ),
@@ -1360,13 +1492,7 @@ class _ProgressTracker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        _node(0),
-        _line(0),
-        _node(1),
-        _line(1),
-        _node(2),
-      ],
+      children: [_node(0), _line(0), _node(1), _line(1), _node(2)],
     );
   }
 }
