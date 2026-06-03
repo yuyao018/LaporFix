@@ -333,12 +333,23 @@ class InsightsViewModel extends ChangeNotifier {
     final entries = counts.entries.toList()
       ..sort((left, right) => right.value.compareTo(left.value));
 
+    final topEntries = entries.take(5).toList(growable: false);
+    final otherCount = entries
+        .skip(5)
+        .fold<int>(0, (sum, entry) => sum + entry.value);
+
     return [
-      for (var index = 0; index < entries.length; index++)
+      for (var index = 0; index < topEntries.length; index++)
         InsightsBreakdownItem(
-          label: entries[index].key,
-          value: entries[index].value,
+          label: topEntries[index].key,
+          value: topEntries[index].value,
           color: _chartColor(index),
+        ),
+      if (otherCount > 0)
+        InsightsBreakdownItem(
+          label: 'Others',
+          value: otherCount,
+          color: _chartColor(5),
         ),
     ];
   }

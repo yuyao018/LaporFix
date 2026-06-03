@@ -116,29 +116,12 @@ class _OverviewContent extends StatelessWidget {
       children: [
         InsightsMetricGrid(metrics: overview.metrics),
         const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: InsightsSectionCard(
-                title: 'Complaints by Category',
-                icon: Icons.bar_chart_rounded,
-                child: InsightsHorizontalBarChart(
-                  items: overview.categoryBreakdown,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: InsightsSectionCard(
-                title: 'Complaints Distribution',
-                icon: Icons.pie_chart_rounded,
-                child: InsightsDistributionChart(
-                  items: overview.categoryBreakdown,
-                ),
-              ),
-            ),
-          ],
+        InsightsSectionCard(
+          title: 'Complaints by Categories',
+          icon: Icons.bar_chart_rounded,
+          child: InsightsCategoryBreakdownChart(
+            items: overview.categoryBreakdown,
+          ),
         ),
         const SizedBox(height: 16),
         InsightsSectionCard(

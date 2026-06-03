@@ -230,6 +230,30 @@ class InsightsSectionCard extends StatelessWidget {
 }
 
 // bars for complaints by category
+class InsightsCategoryBreakdownChart extends StatelessWidget {
+  const InsightsCategoryBreakdownChart({super.key, required this.items});
+
+  final List<InsightsBreakdownItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const _EmptyChart(message: 'No category data');
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: InsightsHorizontalBarChart(items: items)),
+        const SizedBox(width: 14),
+        SizedBox(
+          width: 96,
+          height: 96,
+          child: InsightsDistributionChart(items: items),
+        ),
+      ],
+    );
+  }
+}
+
 class InsightsHorizontalBarChart extends StatelessWidget {
   const InsightsHorizontalBarChart({super.key, required this.items});
 
@@ -281,63 +305,191 @@ class InsightsAreaBarChart extends StatelessWidget {
   }
 }
 
-// pie chart with compact legend
-class InsightsDistributionChart extends StatelessWidget {
+// pie chart for complaints by category, without a repeated legend
+class InsightsDistributionChart extends StatefulWidget {
   const InsightsDistributionChart({super.key, required this.items});
 
   final List<InsightsBreakdownItem> items;
 
   @override
+  State<InsightsDistributionChart> createState() =>
+      _InsightsDistributionChartState();
+}
+
+class _InsightsDistributionChartState extends State<InsightsDistributionChart> {
+  OverlayEntry? _magnifierOverlay;
+
+  @override
+  void didUpdateWidget(covariant InsightsDistributionChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.items != widget.items) {
+      _hideMagnifier();
+    }
+  }
+
+  @override
+  void dispose() {
+    _hideMagnifier();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
+    if (widget.items.isEmpty) {
       return const _EmptyChart(message: 'No distribution data');
     }
 
-    final total = items.fold<int>(0, (sum, item) => sum + item.value);
+    return GestureDetector(
+      onLongPressStart: (_) {
+        if (_magnifierOverlay == null) _showMagnifier();
+      },
+      onLongPressEnd: (_) => _hideMagnifier(),
+      child: CustomPaint(
+        painter: _PieChartPainter(widget.items),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
 
-    return Row(
-      children: [
-        SizedBox(
-          width: 82,
-          height: 82,
-          child: CustomPaint(painter: _PieChartPainter(items)),
+  void _showMagnifier() {
+    if (_magnifierOverlay != null) return;
+
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox) return;
+
+    final origin = renderObject.localToGlobal(Offset.zero);
+    final screenSize = MediaQuery.sizeOf(context);
+    final panelWidth = math.min(220.0, screenSize.width - 24);
+    final estimatedHeight = 42.0 + widget.items.length * 23.0;
+    final rawLeft = origin.dx + renderObject.size.width / 2 - panelWidth / 2;
+    final rawTop = origin.dy - estimatedHeight;
+    final top = rawTop < 12 ? origin.dy + renderObject.size.height : rawTop;
+    final left = rawLeft
+        .clamp(12.0, screenSize.width - panelWidth - 12)
+        .toDouble();
+    final total = widget.items.fold<int>(0, (sum, item) => sum + item.value);
+
+    _magnifierOverlay = OverlayEntry(
+      builder: (context) {
+        return Positioned(
+          left: left,
+          top: top,
+          child: IgnorePointer(
+            child: _PieChartMagnifier(
+              items: widget.items,
+              total: total,
+              width: panelWidth,
+            ),
+          ),
+        );
+      },
+    );
+    Overlay.of(context).insert(_magnifierOverlay!);
+  }
+
+  void _hideMagnifier() {
+    _magnifierOverlay?.remove();
+    _magnifierOverlay = null;
+  }
+}
+
+class _PieChartMagnifier extends StatelessWidget {
+  const _PieChartMagnifier({
+    required this.items,
+    required this.total,
+    required this.width,
+  });
+
+  final List<InsightsBreakdownItem> items;
+  final int total;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 8,
+      color: Colors.transparent,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.86),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.24),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (final item in items.take(5))
+              SizedBox(
+                width: width - 20,
+                child: Text(
+                  'Complaints Breakdown',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (final item in items)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 5),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: item.color,
-                          shape: BoxShape.circle,
+                  child: SizedBox(
+                    width: width - 20,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: item.color,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          '${item.label} ${(item.value / total * 100).round()}%',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.white, fontSize: 10),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${item.value} (${_percentage(item)}%)',
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.black, fontSize: 10),
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
             ],
           ),
         ),
-      ],
+      ),
     );
+  }
+
+  int _percentage(InsightsBreakdownItem item) {
+    if (total == 0) return 0;
+    return (item.value / total * 100).round();
   }
 }
 
@@ -1090,8 +1242,15 @@ class _PieChartPainter extends CustomPainter {
     final total = items.fold<int>(0, (sum, item) => sum + item.value);
     if (total == 0) return;
 
-    final rect = Offset.zero & size;
+    final diameter = math.min(size.width, size.height);
+    final rect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: diameter,
+      height: diameter,
+    );
+    final radius = diameter / 2;
     var startAngle = -math.pi / 2;
+    final labelPainter = TextPainter(textDirection: TextDirection.ltr);
 
     // Each category gets a proportional slice using the colors prepared in the
     // ViewModel, so the legend and pie remain visually connected.
@@ -1101,6 +1260,39 @@ class _PieChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill
         ..color = item.color;
       canvas.drawArc(rect, startAngle, sweep, true, paint);
+
+      final percentage = item.value / total * 100;
+      if (percentage >= 8) {
+        final midAngle = startAngle + sweep / 2;
+        final labelCenter = rect.center.translate(
+          math.cos(midAngle) * radius * 0.58,
+          math.sin(midAngle) * radius * 0.58,
+        );
+        labelPainter.text = TextSpan(
+          text: '${percentage.round()}%',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            shadows: [
+              Shadow(
+                color: Colors.black54,
+                blurRadius: 3,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+        );
+        labelPainter.layout();
+        labelPainter.paint(
+          canvas,
+          Offset(
+            labelCenter.dx - labelPainter.width / 2,
+            labelCenter.dy - labelPainter.height / 2,
+          ),
+        );
+      }
+
       startAngle += sweep;
     }
   }
