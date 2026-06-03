@@ -299,13 +299,14 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                 const SizedBox(height: 12),
 
                                 TextField(
+                                  style: const TextStyle(fontSize: 16),
                                   onChanged: (value) =>
                                       viewModel.report.category = value,
-
+                                  maxLength: 12,
                                   decoration: InputDecoration(
                                     hintText: 'Enter your category',
                                     hintStyle: const TextStyle(
-                                      fontSize: 18,
+                                      fontSize: 16,
                                       color: Colors.grey,
                                     ),
 
@@ -320,7 +321,6 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
 
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
-
                                       borderSide: const BorderSide(
                                         color: Color(0xFFB4B4B4),
                                         width: 0.8,
@@ -329,7 +329,6 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
 
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
-
                                       borderSide: const BorderSide(
                                         color: Color(0xFFB4B4B4),
                                         width: 0.8,
@@ -347,9 +346,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
 
                                 style: TextStyle(
                                   fontSize: 18,
-
                                   fontWeight: FontWeight.bold,
-
                                   color: Colors.black,
                                 ),
                               ),
@@ -360,6 +357,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                               SizedBox(
                                 height: 280,
                                 child: TextField(
+                                  style: const TextStyle(fontSize: 16),
                                   maxLines: null,
                                   expands: true,
                                   textAlignVertical: TextAlignVertical.top,
