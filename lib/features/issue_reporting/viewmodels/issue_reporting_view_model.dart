@@ -45,13 +45,13 @@ class IssueReportingViewModel extends ChangeNotifier {
 
   // Category List
   final List<String> categories = [
-    'Pothole',
-    'Broken Street Light',
-    'Power Outage',
-    'Water Leakage',
-    'Road Damage',
-    'Traffic Light Problem',
-    'Garbage Overflow',
+    'Lighting',
+    'Drainage',
+    'Electricity',
+    'Garbage',
+    'Water',
+    'Roads',
+    'Waste',
     'Other',
   ];
 
