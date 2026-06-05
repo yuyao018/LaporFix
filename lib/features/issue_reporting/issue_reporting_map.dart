@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:group2_urbanfix/features/status_tracker/summary/views/status_tracker_view.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:group2_urbanfix/theme/app_theme.dart';
 import 'package:group2_urbanfix/widgets/function_appbar.dart';
-import 'package:group2_urbanfix/features/issue_reporting/models/issue_report_model.dart';
 import 'package:group2_urbanfix/features/issue_reporting/viewmodels/issue_reporting_view_model.dart';
 
 class IssueReportingMap extends StatefulWidget {
   final IssueReportingViewModel viewModel;
 
-  const IssueReportingMap({Key? key, required this.viewModel})
-    : super(key: key);
+  const IssueReportingMap({super.key, required this.viewModel});
 
   @override
   State<IssueReportingMap> createState() => _IssueReportingMapState();
@@ -120,9 +117,10 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                   });
                                 }
                               },
-                              onTap: (_, __) {
-                                if (_isFormVisible)
+                              onTap: (_, _) {
+                                if (_isFormVisible) {
                                   return; // Disable map interaction while the form is displayed
+                                }
                                 _searchFocusNode.unfocus();
                                 setState(() {
                                   viewModel.clearSuggestions();
@@ -235,6 +233,7 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                                       viewModel
                                                           .addressController
                                                           .clear();
+                                                      viewModel.setAddress('');
                                                       viewModel
                                                           .clearSuggestions();
                                                       setState(() {});
@@ -278,7 +277,7 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                         physics: const ClampingScrollPhysics(),
                                         itemCount:
                                             viewModel.searchSuggestions.length,
-                                        separatorBuilder: (_, __) =>
+                                        separatorBuilder: (_, _) =>
                                             const Divider(
                                               height: 1,
                                               color: Color(0xFFEFEFEF),
@@ -323,6 +322,10 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                                         .text =
                                                     suggestion['display_name'] ??
                                                     '';
+                                                viewModel.setAddress(
+                                                  suggestion['display_name'] ??
+                                                      '',
+                                                );
                                                 viewModel.clearSuggestions();
                                               });
 
@@ -402,11 +405,12 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller:
-                                      viewModel.additionalNotesController,
+                                      viewModel.addressDetailsController,
                                   style: const TextStyle(
                                     fontSize: 14.0,
                                     color: Colors.black87,
                                   ),
+                                  onChanged: viewModel.updateAddressDetails,
                                   decoration: InputDecoration(
                                     hintText: 'e.g., Block A, Unit 12',
                                     hintStyle: const TextStyle(
@@ -450,6 +454,8 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                 ),
                                 const SizedBox(height: 6),
                                 TextField(
+                                  controller:
+                                      viewModel.additionalNotesController,
                                   maxLines: 5,
                                   style: const TextStyle(
                                     fontSize: 14.0,

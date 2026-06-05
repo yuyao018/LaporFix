@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'widgets/bottom_navbar.dart';
 import 'theme/app_theme.dart';
@@ -11,11 +12,16 @@ import 'features/upvoting/upvoting_page.dart';
 import 'features/Profile/ProfilePage.dart';
 import 'features/AI_chatbot/chatbot_button.dart';
 import 'features/AI_chatbot/chatbot_page.dart';
+import 'services/app_settings_service.dart';
+import 'services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  await AppSettingsService.instance.initialize();
   runApp(const MyApp());
+  await FcmService.instance.initialize();
 }
 
 class MyApp extends StatelessWidget {
@@ -25,6 +31,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorKey: FcmService.navigatorKey,
       title: 'LaporFix',
       theme: AppTheme.mainTheme,
       home: StreamBuilder<User?>(
@@ -88,7 +95,7 @@ class _RootNavigationState extends State<RootNavigation> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ChatbotPage(onBack: () => Navigator.pop(context)),
+              builder: (_) => const ChatbotPage(),
             ),
           );
         },

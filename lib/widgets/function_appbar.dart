@@ -5,12 +5,15 @@ class FunctionAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showHistory;
   final VoidCallback? onBack;
   final VoidCallback? onHistoryTap;
+  final Widget? trailingAction;
+
   const FunctionAppBar({
     super.key,
     required this.title,
     this.showHistory = false,
     this.onBack,
     this.onHistoryTap,
+    this.trailingAction,
   });
 
   @override
@@ -53,6 +56,11 @@ class FunctionAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                   onPressed: onHistoryTap,
                 ),
+              ),
+            if (trailingAction != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: trailingAction!,
               ),
           ],
         ),

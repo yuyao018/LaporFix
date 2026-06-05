@@ -9,7 +9,7 @@ import 'package:group2_urbanfix/widgets/function_appbar.dart';
 import '../issue_reporting/issue_reporting_map.dart';
 
 class IssueReportingPage extends StatefulWidget {
-  const IssueReportingPage({Key? key}) : super(key: key);
+  const IssueReportingPage({super.key});
 
   VoidCallback? get onBack => null;
 
@@ -25,6 +25,15 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
     super.initState();
 
     viewModel = IssueReportingViewModel();
+    viewModel.loadDraftIfEnabled().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    viewModel.dispose();
+    super.dispose();
   }
 
   @override
@@ -156,7 +165,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                                   ),
                                                   decoration: BoxDecoration(
                                                     color: Colors.black
-                                                        .withOpacity(0.6),
+                                                        .withValues(alpha: 0.6),
 
                                                     shape: BoxShape.circle,
                                                   ),
@@ -200,7 +209,9 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                                       boxShadow: [
                                                         BoxShadow(
                                                           color: Colors.black
-                                                              .withOpacity(0.2),
+                                                              .withValues(
+                                                                alpha: 0.2,
+                                                              ),
                                                           blurRadius: 6,
                                                           offset: const Offset(
                                                             0,
@@ -286,8 +297,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                     }).toList(),
 
                                     onChanged: (e) {
-                                      viewModel.report.category = e ?? '';
-
+                                      viewModel.updateCategory(e);
                                       setState(() {});
                                     },
                                   ),
@@ -300,8 +310,8 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
 
                                 TextField(
                                   style: const TextStyle(fontSize: 16),
-                                  onChanged: (value) =>
-                                      viewModel.report.category = value,
+                                  controller: viewModel.categoryController,
+                                  onChanged: viewModel.updateCategory,
                                   maxLength: 12,
                                   decoration: InputDecoration(
                                     hintText: 'Enter your category',
@@ -357,13 +367,13 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                               SizedBox(
                                 height: 280,
                                 child: TextField(
+                                  controller: viewModel.descriptionController,
                                   style: const TextStyle(fontSize: 16),
                                   maxLines: null,
                                   expands: true,
                                   textAlignVertical: TextAlignVertical.top,
                                   onChanged: (value) {
-                                    viewModel.report.description = value;
-
+                                    viewModel.updateDescription(value);
                                     setState(() {}); // Refresh UI
                                   },
 
@@ -454,17 +464,17 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
 
                                     await viewModel.getCurrentLocation();
 
-                                    if (mounted) {
-                                      Navigator.pop(context);
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => IssueReportingMap(
-                                            viewModel: viewModel,
-                                          ),
+                                    if (!context.mounted) return;
+
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => IssueReportingMap(
+                                          viewModel: viewModel,
                                         ),
-                                      );
-                                    }
+                                      ),
+                                    );
                                   },
 
                                   child: Text(

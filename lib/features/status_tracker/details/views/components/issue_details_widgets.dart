@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../services/app_settings_service.dart';
 import '../../../../../theme/app_theme.dart';
 import '../../models/issue_detail_models.dart';
 import '../../viewmodels/issue_details_view_model.dart';
@@ -306,37 +307,44 @@ class _ReportThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     final firstImageUrl = imageUrls.isEmpty ? null : imageUrls.first;
 
-    return GestureDetector(
-      onTap: imageUrls.isEmpty
-          ? null
-          : () => _showImageGallery(context, imageUrls: imageUrls),
-      child: Container(
-        width: 62,
-        height: 74,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: firstImageUrl == null
-            ? const Icon(
-                Icons.description_outlined,
-                color: Colors.black,
-                size: 42,
-              )
-            : Image.network(
-                firstImageUrl,
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
+    return AnimatedBuilder(
+      animation: AppSettingsService.instance,
+      builder: (context, _) {
+        final reduceMedia = AppSettingsService.instance.shouldReduceMedia;
+
+        return GestureDetector(
+          onTap: imageUrls.isEmpty || reduceMedia
+              ? null
+              : () => _showImageGallery(context, imageUrls: imageUrls),
+          child: Container(
+            width: 62,
+            height: 74,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: firstImageUrl == null || reduceMedia
+                ? Icon(
                     Icons.description_outlined,
                     color: Colors.black,
                     size: 42,
-                  );
-                },
-              ),
-      ),
+                  )
+                : Image.network(
+                    firstImageUrl,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.description_outlined,
+                        color: Colors.black,
+                        size: 42,
+                      );
+                    },
+                  ),
+          ),
+        );
+      },
     );
   }
 }
@@ -352,24 +360,33 @@ class _CardImagePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final firstImageUrl = imageUrls.first;
 
-    return Center(
-      child: GestureDetector(
-        onTap: () => _showImageGallery(context, imageUrls: imageUrls),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(_imagePreviewRadius),
-          child: AspectRatio(
-            aspectRatio: aspectRatio,
-            child: Image.network(
-              firstImageUrl,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              errorBuilder: (context, error, stackTrace) {
-                return const _ImageErrorPlaceholder();
-              },
+    return AnimatedBuilder(
+      animation: AppSettingsService.instance,
+      builder: (context, _) {
+        if (AppSettingsService.instance.shouldReduceMedia) {
+          return const _ReducedMediaPlaceholder();
+        }
+
+        return Center(
+          child: GestureDetector(
+            onTap: () => _showImageGallery(context, imageUrls: imageUrls),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(_imagePreviewRadius),
+              child: AspectRatio(
+                aspectRatio: aspectRatio,
+                child: Image.network(
+                  firstImageUrl,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const _ImageErrorPlaceholder();
+                  },
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -509,6 +526,29 @@ class _ImageErrorPlaceholder extends StatelessWidget {
       color: AppTheme.surfaceGrey,
       child: Center(
         child: Icon(Icons.broken_image, color: AppTheme.textSecondary),
+      ),
+    );
+  }
+}
+
+class _ReducedMediaPlaceholder extends StatelessWidget {
+  const _ReducedMediaPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceGrey,
+        borderRadius: BorderRadius.circular(_imagePreviewRadius),
+      ),
+      child: const AspectRatio(
+        aspectRatio: 1.45,
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported_rounded,
+            color: AppTheme.textSecondary,
+          ),
+        ),
       ),
     );
   }
