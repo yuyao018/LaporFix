@@ -1,23 +1,103 @@
 📝 Reporting an Issue on LaporFix
 
-Reporting a problem in your community is quick and easy. Follow these steps to ensure your report reaches the right department:
+Reporting a problem in your community takes just a few steps. Here is exactly how the process works:
 
-1. Open the Report Form
-Click on the (+) icon on your dashboard to open the submission form.
+─────────────────────────────────────────
+STEP 1 — Open the Report Form
+─────────────────────────────────────────
+Tap the (+) button on the Issue tab to open the "Create Report" screen.
 
-2. Capture and Upload
-Start by uploading a clear photo of the issue. A good visual helps our team assess the severity and bring the right tools for the fix.
+─────────────────────────────────────────
+STEP 2 — Upload a Photo
+─────────────────────────────────────────
+Tap the photo area and select an image from your device gallery.
+- Tap "Add Photo" to upload for the first time.
+- Once uploaded, tap "Edit Photo" to replace it, or tap the (×) icon in the
+  top-right corner of the image to remove it.
 
-3. Categorize Your Report
-Select the appropriate category (e.g., Road Damage, Waste Management, Street Lighting). This ensures the report is routed to the correct specialized team.
+A photo is required before you can proceed.
 
-4. Set the Location
-Click "Next" to access the map.
-GPS Pin: Your current GPS location will be detected automatically. Please ensure the pin is dropped exactly where the issue is located.
-Address Details: Add any specific landmarks or floor numbers in the additional address field to help our team find the spot faster.
+─────────────────────────────────────────
+STEP 3 — Select a Category
+─────────────────────────────────────────
+Choose the category that best describes the issue from the dropdown:
 
-5. Finalize with Notes
-Add any additional notes or descriptions (e.g., "The pothole is hidden under a puddle"). Once you're ready, hit Submit.
+  • Pothole
+  • Broken Street Light
+  • Power Outage
+  • Water Leakage
+  • Road Damage
+  • Traffic Light Problem
+  • Garbage Overflow
+  • Other
 
+If you select "Other", a text field will appear where you can type a custom
+category name (maximum 12 characters).
+
+A category is required before you can proceed.
+
+─────────────────────────────────────────
+STEP 4 — Add a Description
+─────────────────────────────────────────
+Type a description of the issue in the text field provided. Be as specific as
+possible — for example: "Large pothole near the junction, partially hidden by
+standing water."
+
+A description is required before you can proceed.
+
+─────────────────────────────────────────
+STEP 5 — Tap "Next" to Set the Location
+─────────────────────────────────────────
+Tapping "Next" will:
+1. Validate that a photo, category, and description have all been filled in.
+2. Fetch your current GPS location automatically (a loading spinner will
+   appear briefly).
+3. Open the map screen with a pin placed at your current location.
+
+On the map screen:
+- A red location pin is displayed at the centre of the map — this marks the
+  reported location.
+- Drag the map to reposition the pin to the exact spot of the issue.
+- Use the search bar at the top to search for an address by name. Suggestions
+  are provided by OpenStreetMap Nominatim. Tap a suggestion to jump the map
+  to that location.
+- Tap the (×) icon in the search bar to clear the current address text.
+
+Once the pin is correctly placed, tap "Next" to proceed.
+
+─────────────────────────────────────────
+STEP 6 — Add Address Details and Notes
+─────────────────────────────────────────
+After confirming the map location, a form slides up with two optional fields:
+
+  Address Details (Optional)
+    Additional location information such as block number, unit number, or
+    floor — e.g., "Block A, Unit 12".
+
+  Additional Notes (Optional)
+    Any extra context that may help the team — e.g., "The streetlight only
+    fails after 10 PM" or "Issue is near the back entrance".
+
+Tap the back arrow to return to the map and adjust the pin if needed.
+
+─────────────────────────────────────────
+STEP 7 — Submit the Report
+─────────────────────────────────────────
+Tap "Submit Report". The app will:
+1. Upload the photo to Firebase Storage.
+2. Save the report to Firestore under the "issue" collection with a status
+   of "submitted".
+
+A success dialog will appear once the report is saved. Tap anywhere on it
+to dismiss and return to the home screen.
+
+─────────────────────────────────────────
 💡 What happens next?
-You will receive a Ticket ID immediately. You can track the progress of your fix in real-time through the "My Reports" section or by asking LAPI for an update!
+─────────────────────────────────────────
+Your report is immediately visible in the Issue tab (Status Tracker), where
+you can follow its progress through the following statuses:
+
+  submitted → under review → in progress → resolved
+
+You can also ask LAPI (the AI chatbot) for an update on your report at any
+time.

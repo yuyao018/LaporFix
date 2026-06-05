@@ -7,7 +7,6 @@ import 'package:latlong2/latlong.dart';
 import '../models/issue_report_model.dart';
 import '../services/image_service.dart';
 import '../services/location_service.dart';
-import '../issue_reporting_map.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -140,6 +139,16 @@ class IssueReportingViewModel extends ChangeNotifier {
     final NavigatorState navigator = Navigator.of(context);
     String postcode = '';
 
+    isSubmittingReport = true;
+    notifyListeners();
+
+    // Show loading indicator immediately (before any async work)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
       if (report.latitude != null && report.longitude != null) {
         List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -155,15 +164,6 @@ class IssueReportingViewModel extends ChangeNotifier {
       debugPrint('Postcode fetch failed: $e');
     }
     try {
-      isSubmittingReport = true;
-      notifyListeners();
-
-      // Show loading indicator while submitting report
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
 
       // STEP A: Upload image to Firebase Storage
       String imageUrl = '';
@@ -180,8 +180,6 @@ class IssueReportingViewModel extends ChangeNotifier {
       // STEP B: Save report data to Firestore 'issue' collection
       final String currentUserId =
           FirebaseAuth.instance.currentUser?.uid ?? 'anonymous_user';
-      String uniqueIssueId =
-          'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
 
       // Save report into the required 'issue' collection！
       await _firestore.collection('issue').add({
@@ -244,9 +242,9 @@ class IssueReportingViewModel extends ChangeNotifier {
 
       // Display success dialog
       await showDialog(
-        context: context,
+        context: navigator.context, // ignore: use_build_context_synchronously
         barrierDismissible: true,
-        barrierColor: Colors.black.withOpacity(0.3),
+        barrierColor: Colors.black.withValues(alpha: 0.3),
         builder: (_) {
           return Dialog(
             backgroundColor: Colors.transparent,
@@ -257,12 +255,12 @@ class IssueReportingViewModel extends ChangeNotifier {
                 color: const Color(0xFFF8F9FA),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -334,8 +332,9 @@ class IssueReportingViewModel extends ChangeNotifier {
         navigator.pop(); // Ensure loading dialog is closed on error
       }
 
+      // ignore: use_build_context_synchronously
       showDialog(
-        context: context,
+        context: navigator.context, // ignore: use_build_context_synchronously
         builder: (_) {
           return AlertDialog(
             title: const Text('Error'),

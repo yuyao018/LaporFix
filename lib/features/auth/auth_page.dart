@@ -3,7 +3,7 @@ import '../../theme/app_theme.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
 
-/// Wrapper that shows the gradient header + tab toggle (Log in / Sign in)
+/// Wrapper that shows the gradient header + tab toggle (Sign In / Sign Up)
 /// and switches between LoginPage and SignupPage content.
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -13,7 +13,7 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  bool _isLogin = true; // true = Log in tab, false = Sign in tab
+  bool _isLogin = true; // true = Sign In tab, false = Sign Up tab
 
   @override
   Widget build(BuildContext context) {
@@ -25,54 +25,63 @@ class _AuthPageState extends State<AuthPage> {
           gradient: AppTheme.primaryGradientDiagonal,
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // ── App title ──
+                          const Text(
+                            'LaporFix',
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textOnGradient,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
 
-                  // ── App title ──
-                  const Text(
-                    'LaporFix',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textOnGradient,
+                          // ── White card ──
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.symmetric(horizontal: 24),
+                            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // ── Tab toggle ──
+                                _TabToggle(
+                                  isLogin: _isLogin,
+                                  onToggle: (val) =>
+                                      setState(() => _isLogin = val),
+                                ),
+                                const SizedBox(height: 24),
+
+                                // ── Form content ──
+                                if (_isLogin)
+                                  const LoginPage()
+                                else
+                                  const SignupPage(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 32),
-
-                  // ── White card ──
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 24),
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // ── Tab toggle ──
-                        _TabToggle(
-                          isLogin: _isLogin,
-                          onToggle: (val) => setState(() => _isLogin = val),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // ── Form content ──
-                        if (_isLogin)
-                          const LoginPage()
-                        else
-                          const SignupPage(),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -113,7 +122,7 @@ class _TabToggle extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  'Log in',
+                  'Sign In',
                   style: tt.labelLarge?.copyWith(
                     color: isLogin ? Colors.white : AppTheme.textSecondary,
                   ),
@@ -132,7 +141,7 @@ class _TabToggle extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  'Sign in',
+                  'Sign Up',
                   style: tt.labelLarge?.copyWith(
                     color: !isLogin ? Colors.white : AppTheme.textSecondary,
                   ),

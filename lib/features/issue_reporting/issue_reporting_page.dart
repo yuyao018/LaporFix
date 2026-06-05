@@ -9,7 +9,7 @@ import 'package:group2_urbanfix/widgets/function_appbar.dart';
 import '../issue_reporting/issue_reporting_map.dart';
 
 class IssueReportingPage extends StatefulWidget {
-  const IssueReportingPage({Key? key}) : super(key: key);
+  const IssueReportingPage({super.key});
 
   VoidCallback? get onBack => null;
 
@@ -156,7 +156,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                                   ),
                                                   decoration: BoxDecoration(
                                                     color: Colors.black
-                                                        .withOpacity(0.6),
+                                                        .withValues(alpha: 0.6),
 
                                                     shape: BoxShape.circle,
                                                   ),
@@ -200,7 +200,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                                       boxShadow: [
                                                         BoxShadow(
                                                           color: Colors.black
-                                                              .withOpacity(0.2),
+                                                              .withValues(alpha: 0.2),
                                                           blurRadius: 6,
                                                           offset: const Offset(
                                                             0,
@@ -442,8 +442,10 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                       return; // Prevent navigation
                                     }
 
-                                    // Show loading indicator while fetching location
+                                    // Capture navigator before async gap
+                                    final navigator = Navigator.of(context);
 
+                                    // Show loading indicator while fetching location
                                     showDialog(
                                       context: context,
                                       barrierDismissible: false,
@@ -454,17 +456,15 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
 
                                     await viewModel.getCurrentLocation();
 
-                                    if (mounted) {
-                                      Navigator.pop(context);
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => IssueReportingMap(
-                                            viewModel: viewModel,
-                                          ),
+                                    if (!mounted) return;
+                                    navigator.pop();
+                                    navigator.push(
+                                      MaterialPageRoute(
+                                        builder: (_) => IssueReportingMap(
+                                          viewModel: viewModel,
                                         ),
-                                      );
-                                    }
+                                      ),
+                                    );
                                   },
 
                                   child: Text(

@@ -138,6 +138,7 @@ class ClearAllRequest(BaseModel):
 class AssistantMessagePayload(BaseModel):
     content: str = ""
     disruption_notice: Optional[dict] = None
+    ticket: Optional[dict] = None
 
 
 class SaveTurnRequest(BaseModel):
@@ -331,6 +332,7 @@ async def save_turn_endpoint(req: SaveTurnRequest):
         {
             "content": m.content,
             "disruption_notice": m.disruption_notice,
+            "ticket": m.ticket,
         }
         for m in req.assistant_messages
     ]
@@ -461,6 +463,8 @@ async def get_messages(user_id: str, session_id: str):
                 entry["image_url"] = data["image_url"]
             if data.get("disruption_notice"):
                 entry["disruption_notice"] = data["disruption_notice"]
+            if data.get("ticket"):
+                entry["ticket"] = data["ticket"]
             result.append(entry)
         return {"messages": result}
     except HTTPException:

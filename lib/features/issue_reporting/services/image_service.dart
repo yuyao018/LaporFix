@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ImageService {
@@ -16,7 +17,7 @@ class ImageService {
 
       return File(pickedFile.path);
     } catch (e) {
-      print("Error picking image from gallery: $e");
+      debugPrint("Error picking image from gallery: $e");
       return null;
     }
   }

@@ -230,7 +230,7 @@ class _SignupPageState extends State<SignupPage> {
         // ── Sign in button ──
         _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : PrimaryButton(label: 'Sign in', onPressed: _signUp),
+            : PrimaryButton(label: 'Sign Up', onPressed: _signUp),
       ],
     );
   }

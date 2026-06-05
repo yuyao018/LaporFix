@@ -694,6 +694,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
         ticketItems.add(ticket);
 
         assistantPayloads.add({
+          'content': '',
           'ticket': {
             'ticketId': ticketId,
             'category': category,
@@ -976,6 +977,24 @@ class _ChatbotPageState extends State<ChatbotPage> {
       itemBuilder: (context, index) {
         final item = _items[_items.length - 1 - index];
         return switch (item) {
+          _MessageItem(:final message) when message.ticketData != null =>
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                child: _TicketCard(
+                  ticket: _TicketItem(
+                    ticketId: (message.ticketData!['ticketId'] ?? '').toString(),
+                    category: (message.ticketData!['category'] ?? '').toString(),
+                    status: (message.ticketData!['status'] ?? 'submitted').toString(),
+                    expectedFixDate: (message.ticketData!['expectedFixDate'] ?? '').toString(),
+                    title: (message.ticketData!['title'] ?? '').toString(),
+                    description: (message.ticketData!['description'] ?? '').toString(),
+                    location: (message.ticketData!['location'] ?? '').toString(),
+                  ),
+                ),
+              ),
+            ),
           _MessageItem(:final message) => _ChatBubble(message: message),
           _DateHeader(:final sessionTime) => _SessionDivider(time: sessionTime),
           _TicketItem() => Align(
@@ -1170,7 +1189,7 @@ class _ChatBubble extends StatelessWidget {
                       ),
                     );
                   },
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     height: 120,
                     alignment: Alignment.center,
                     color: AppTheme.surfaceGrey,
@@ -1251,7 +1270,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         ),
         child: AnimatedBuilder(
           animation: _controller,
-          builder: (_, __) {
+          builder: (_, _) {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: List.generate(3, (i) {
