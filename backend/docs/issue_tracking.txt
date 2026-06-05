@@ -1,0 +1,118 @@
+📊 Tracking Your Issue Reports on LaporFix
+
+Once you've submitted an issue, you can monitor its progress through the Issue tab (Status Tracker). This guide explains how to use the tracking features and what each status means.
+
+═══════════════════════════════════════════════════════════════════
+ACCESSING THE STATUS TRACKER
+═══════════════════════════════════════════════════════════════════
+
+The Status Tracker is accessible from the Issue tab in the bottom navigation.
+
+When you open it, you'll see:
+  • A list of all your submitted issue reports
+  • Each report shows as a card with:
+    - Category and title
+    - Current status badge (color-coded)
+    - Location heading
+    - Last updated timestamp
+
+═══════════════════════════════════════════════════════════════════
+ISSUE STATUSES
+═══════════════════════════════════════════════════════════════════
+
+Every issue progresses through these statuses:
+
+┌────────────────────────────────────────────────────────────────┐
+│ SUBMITTED                                                      │
+│ Color: Blue badge                                              │
+│                                                                │
+│ Your report has been received and is waiting for review by    │
+│ the responsible department. The team will assess the issue     │
+│ and decide on the next steps.                                  │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ IN PROGRESS                                                    │
+│ Color: Yellow badge                                            │
+│                                                                │
+│ The issue has been assigned to a team and work has started.   │
+│ Repairs, maintenance, or other resolution activities are       │
+│ actively underway.                                             │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ COMPLETED                                                      │
+│ Color: Green badge                                             │
+│                                                                │
+│ The issue has been resolved. The responsible team has          │
+│ completed the necessary work and marked the issue as fixed.    │
+│ Completion photos may be available in the issue details.       │
+└────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+SEARCHING AND FILTERING
+═══════════════════════════════════════════════════════════════════
+
+Use the search bar and filter options at the top of the Status Tracker to narrow down the list:
+
+  SEARCH BAR
+    Type any keyword to search across:
+      - Issue title
+      - Category
+      - Description
+      - Location (heading and postcode)
+      - Issue ID
+
+    The list updates instantly as you type.
+
+  FILTER BY STATUS
+    Tap the filter icon and select:
+      • All — Shows all your reports regardless of status
+      • Submitted — Only shows newly submitted reports awaiting review
+      • In Progress — Only shows issues currently being worked on
+      • Completed — Only shows resolved issues
+
+═══════════════════════════════════════════════════════════════════
+VIEWING ISSUE DETAILS
+═══════════════════════════════════════════════════════════════════
+
+Tap any issue card to open the full Issue Details page.
+
+On the details screen, you can see:
+  • Full description of the issue
+  • Photos you uploaded when reporting
+  • Exact location on the map (heading, postcode, coordinates)
+  • Status history with timestamps:
+    - Submitted At — when you first reported the issue
+    - In Progress At — when work began (if applicable)
+    - Completed At — when the issue was resolved (if applicable)
+  • Estimated resolution date (if provided by the department)
+  • Proof of completion photos (when the issue is marked Completed)
+  • Engagement stats: likes and comment count
+  • Additional notes you included during submission
+
+The details page updates automatically when the status changes — you don't need to go back and reload the list.
+
+═══════════════════════════════════════════════════════════════════
+REFRESHING THE LIST
+═══════════════════════════════════════════════════════════════════
+
+The Status Tracker updates automatically in real time as statuses change, but you can also manually refresh by pulling down on the list.
+
+═══════════════════════════════════════════════════════════════════
+INSIGHTS
+═══════════════════════════════════════════════════════════════════
+
+Tap the Insights icon (top-right of the Status Tracker) to view analytics and statistics about issue reports. This feature provides a broader view of the reporting activity in your community.
+
+═══════════════════════════════════════════════════════════════════
+💡 TIPS
+═══════════════════════════════════════════════════════════════════
+
+  • Status changes are reflected immediately — no need to refresh manually
+  • The list is sorted by the most recently updated issues first
+  • You can only see issues that you reported (not other users' reports)
+  • Use the search feature to quickly find an issue by location or category
+  • Deleted issues are automatically hidden from the list
+  • Each issue card shows how many likes and comments it has received
+  • Ask LAPI (the AI chatbot) for updates on your reports at any time

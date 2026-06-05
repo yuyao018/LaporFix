@@ -156,15 +156,15 @@ class IssueReportingViewModel extends ChangeNotifier {
     final settings = AppSettingsService.instance;
     String postcode = '';
 
-    if (report.image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add a photo before submitting this report.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
+    isSubmittingReport = true;
+    notifyListeners();
+
+    // Show loading indicator immediately (before any async work)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
 
     try {
       if (report.latitude != null && report.longitude != null) {
@@ -180,9 +180,6 @@ class IssueReportingViewModel extends ChangeNotifier {
     } catch (e) {
       debugPrint('Postcode fetch failed: $e');
     }
-
-    if (!context.mounted) return;
-
     try {
       isSubmittingReport = true;
       notifyListeners();
@@ -209,6 +206,7 @@ class IssueReportingViewModel extends ChangeNotifier {
       // STEP B: Save report data to Firestore 'issue' collection
       final String currentUserId =
           FirebaseAuth.instance.currentUser?.uid ?? 'anonymous_user';
+
       // Save report into the required 'issue' collection！
       await _firestore.collection('issue').add({
         // Basic report information
@@ -276,7 +274,7 @@ class IssueReportingViewModel extends ChangeNotifier {
 
       // Display success dialog
       await showDialog(
-        context: context,
+        context: navigator.context, // ignore: use_build_context_synchronously
         barrierDismissible: true,
         barrierColor: Colors.black.withValues(alpha: 0.3),
         builder: (_) {
@@ -367,17 +365,16 @@ class IssueReportingViewModel extends ChangeNotifier {
         navigator.pop(); // Ensure loading dialog is closed on error
       }
 
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (_) {
-            return AlertDialog(
-              title: const Text('Error'),
-              content: Text('Failed to save database: ${e.toString()}'),
-            );
-          },
-        );
-      }
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: navigator.context, // ignore: use_build_context_synchronously
+        builder: (_) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: Text('Failed to save database: ${e.toString()}'),
+          );
+        },
+      );
       rethrow;
     } finally {
       isSubmittingReport = false;

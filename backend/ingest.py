@@ -62,25 +62,25 @@ EMBEDDING_MODEL = "embeddinggemma:300m"  # local Ollama model — pull with: oll
 # ── Curated Malaysian government URLs ─────────────────────────────────────────
 # Only *.gov.my domains are permitted. Add more pages here as needed.
 GOV_MY_URLS: list[str] = [
-    # MyGovernment — public complaints & feedback portal
-    "https://www.malaysia.gov.my/en/feedback",
-    "https://www.malaysia.gov.my/en/feedback/integrated-complaint-management-system-sispaa",
-    "https://www.malaysia.gov.my/en/feedback/malaysian-government-call-centre-mygcc",
-    # Public service delivery & local government
-    "https://www.malaysia.gov.my/en/my-initiative/public-service-delivery-and-local-government",
-    # JPS — Department of Irrigation and Drainage (flood/drainage)
-    "https://www.water.gov.my/",
-    # Ministry of Transport — road safety & feedback
-    "https://www.mot.gov.my/en/feedback",
-    "https://www.mot.gov.my/en/land/safety/road-accident-and-facilities",
-    # DBKL — Kuala Lumpur City Hall
-    "https://www.dbkl.gov.my/en/contact-us/",
-    # KKR — Ministry of Works (roads, bridges, public infrastructure)
-    "https://www.kkr.gov.my/en/public-complaints",
-    # TNB — national electricity (outage reporting info)
-    "https://www.tnb.com.my/residential/report-an-outage",
-    # SPAN — National Water Services Commission
-    "https://www.span.gov.my/page/view/aduan-awam",
+    # # MyGovernment — public complaints & feedback portal
+    # "https://www.malaysia.gov.my/en/feedback",
+    # "https://www.malaysia.gov.my/en/feedback/integrated-complaint-management-system-sispaa",
+    # "https://www.malaysia.gov.my/en/feedback/malaysian-government-call-centre-mygcc",
+    # # Public service delivery & local government
+    # "https://www.malaysia.gov.my/en/my-initiative/public-service-delivery-and-local-government",
+    # # JPS — Department of Irrigation and Drainage (flood/drainage)
+    # "https://www.water.gov.my/",
+    # # Ministry of Transport — road safety & feedback
+    # "https://www.mot.gov.my/en/feedback",
+    # "https://www.mot.gov.my/en/land/safety/road-accident-and-facilities",
+    # # DBKL — Kuala Lumpur City Hall
+    # "https://www.dbkl.gov.my/en/contact-us/",
+    # # KKR — Ministry of Works (roads, bridges, public infrastructure)
+    # "https://www.kkr.gov.my/en/public-complaints",
+    # # TNB — national electricity (outage reporting info)
+    # "https://www.tnb.com.my/residential/report-an-outage",
+    # # SPAN — National Water Services Commission
+    # "https://www.span.gov.my/page/view/aduan-awam",
 ]
 
 # Safety guard: reject any URL not under a .gov.my domain

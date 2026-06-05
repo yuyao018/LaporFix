@@ -50,7 +50,7 @@ class FunctionAppBar extends StatelessWidget implements PreferredSizeWidget {
                 padding: const EdgeInsets.only(right: 8.0),
                 child: IconButton(
                   icon: const Icon(
-                    Icons.edit_rounded,
+                    Icons.history_rounded,
                     color: Colors.black,
                     size: 32,
                   ),

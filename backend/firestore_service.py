@@ -70,6 +70,7 @@ def save_message(
     content: str,
     image_url: str | None = None,
     disruption_notice: dict | None = None,
+    ticket: dict | None = None,
 ):
     """
     Append a single message to the session's messages sub-collection.
@@ -104,6 +105,8 @@ def save_message(
             payload["image_url"] = image_url
         if disruption_notice:
             payload["disruption_notice"] = disruption_notice
+        if ticket:
+            payload["ticket"] = ticket
 
         session_ref.collection("messages").add(payload)
     except Exception as e:
@@ -164,6 +167,7 @@ def save_local_turn(
                 "assistant",
                 msg.get("content", "") or "",
                 disruption_notice=msg.get("disruption_notice"),
+                ticket=msg.get("ticket"),
             )
         return is_first
     except Exception as e:

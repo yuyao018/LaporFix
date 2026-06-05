@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../widgets/function_appbar.dart';
+import '../../widgets/location_search_sheet.dart';
 import '../../theme/app_theme.dart';
 import 'app_settings_page.dart';
 
@@ -98,30 +99,10 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _changePassword() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user?.email == null) return;
-
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: user!.email!);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset email sent.')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }
-
   void _openSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const AppSettingsPage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AppSettingsPage()));
   }
 
   PreferredSizeWidget _buildProfileAppBar() {
@@ -134,6 +115,235 @@ class _ProfilePageState extends State<ProfilePage> {
         onPressed: _openSettings,
       ),
     );
+  }
+
+  Future<void> _changeAddress() async {
+    final result = await showModalBottomSheet<Map<String, String>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const LocationSearchSheet(),
+    );
+
+    if (result == null || !mounted) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+            'homeAddress': result['full'] ?? '',
+            'area': result['area'] ?? '',
+            'state': result['state'] ?? '',
+          });
+
+      if (mounted) {
+        setState(() {
+          _userData?['homeAddress'] = result['full'] ?? '';
+          _userData?['area'] = result['area'] ?? '';
+          _userData?['state'] = result['state'] ?? '';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Address updated successfully.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating address: $e')));
+      }
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.email == null) return;
+
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    // Each field tracks its own obscure state independently
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        String? errorText;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text('Change Password'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Current password
+                  TextField(
+                    controller: currentCtrl,
+                    obscureText: obscureCurrent,
+                    decoration: InputDecoration(
+                      labelText: 'Current Password',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureCurrent
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () => setDialogState(
+                          () => obscureCurrent = !obscureCurrent,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // New password
+                  TextField(
+                    controller: newCtrl,
+                    obscureText: obscureNew,
+                    decoration: InputDecoration(
+                      labelText: 'New Password',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureNew ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () =>
+                            setDialogState(() => obscureNew = !obscureNew),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Confirm new password
+                  TextField(
+                    controller: confirmCtrl,
+                    obscureText: obscureConfirm,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm New Password',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureConfirm
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () => setDialogState(
+                          () => obscureConfirm = !obscureConfirm,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Inline error message
+                  if (errorText != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      errorText!,
+                      style: const TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () async {
+                    final current = currentCtrl.text.trim();
+                    final newPass = newCtrl.text.trim();
+                    final confirm = confirmCtrl.text.trim();
+
+                    // Validation
+                    if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
+                      setDialogState(
+                        () => errorText = 'Please fill in all fields.',
+                      );
+                      return;
+                    }
+                    if (newPass.length < 6) {
+                      setDialogState(
+                        () => errorText =
+                            'New password must be at least 6 characters.',
+                      );
+                      return;
+                    }
+                    if (newPass != confirm) {
+                      setDialogState(
+                        () => errorText = 'New passwords do not match.',
+                      );
+                      return;
+                    }
+
+                    try {
+                      // Re-authenticate with current password first
+                      final credential = EmailAuthProvider.credential(
+                        email: user!.email!,
+                        password: current,
+                      );
+                      await user.reauthenticateWithCredential(credential);
+
+                      // Update to new password
+                      await user.updatePassword(newPass);
+
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                      }
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password changed successfully.'),
+                          ),
+                        );
+                      }
+                    } on FirebaseAuthException catch (e) {
+                      String message;
+                      if (e.code == 'wrong-password' ||
+                          e.code == 'invalid-credential') {
+                        message = 'Current password is incorrect.';
+                      } else {
+                        message = e.message ?? 'An error occurred.';
+                      }
+                      setDialogState(() => errorText = message);
+                    } catch (e) {
+                      setDialogState(() => errorText = 'Error: $e');
+                    }
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    currentCtrl.dispose();
+    newCtrl.dispose();
+    confirmCtrl.dispose();
   }
 
   String _extractShortLocation(String address) {
@@ -300,7 +510,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       label: 'Address',
                       value: address.isNotEmpty ? address : 'Not set',
                       actionText: 'Change',
-                      onAction: () {},
+                      onAction: _changeAddress,
                     ),
 
                     const SizedBox(height: 28),

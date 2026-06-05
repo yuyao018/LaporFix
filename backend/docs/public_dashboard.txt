@@ -1,0 +1,217 @@
+📊 Understanding Report Insights on LaporFix
+
+The Report Insights feature gives you a visual overview of issue reporting trends, resolution times, and community engagement. This guide explains what data you can view and how to use the insights dashboard.
+
+═══════════════════════════════════════════════════════════════════
+ACCESSING INSIGHTS
+═══════════════════════════════════════════════════════════════════
+
+From the Issue tab (Status Tracker), tap the **Insights icon** (📊) in the top-right corner. This opens the insights dashboard.
+
+═══════════════════════════════════════════════════════════════════
+FILTER CONTROLS
+═══════════════════════════════════════════════════════════════════
+
+At the top of the insights screen, you'll see two filter controls:
+
+┌────────────────────────────────────────────────────────────────┐
+│ CATEGORY FILTER                                                │
+│                                                                │
+│ Choose what you want to analyze:                              │
+│   • Overview — Shows data for all issue categories combined   │
+│   • Specific category — Shows data for just that category     │
+│     (e.g., Pothole, Water Leakage, Garbage Overflow)          │
+│                                                                │
+│ Available categories are pulled from your submitted reports.  │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ TIME PERIOD FILTER                                             │
+│                                                                │
+│ Select the time range for analysis:                           │
+│   • Last 24 Hours — Hourly breakdown (4 buckets: 12am-6am,    │
+│     6am-12pm, 12pm-6pm, 6pm-12am)                             │
+│   • Last 7 Days — Daily breakdown                             │
+│   • Last 30 Days — Weekly breakdown                           │
+│   • Last 90 Days — Monthly breakdown                          │
+│                                                                │
+│ The dashboard updates instantly when you change the period.   │
+└────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+OVERVIEW MODE (ALL CATEGORIES)
+═══════════════════════════════════════════════════════════════════
+
+When "Overview" is selected, the dashboard shows system-wide analytics:
+
+┌────────────────────────────────────────────────────────────────┐
+│ KEY METRICS (3 CARDS)                                          │
+│                                                                │
+│ • Unresolved — Total issues still awaiting resolution         │
+│   (includes "Submitted" + "In Progress" statuses)             │
+│                                                                │
+│ • Solved — Total issues marked as "Completed"                 │
+│                                                                │
+│ • In Progress — Total issues currently being worked on        │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ COMPLAINTS BY CATEGORY (PIE CHART)                            │
+│                                                                │
+│ Shows the top 5 categories with the most reports, plus an     │
+│ "Others" slice for the rest. Each slice is color-coded.       │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ COMPLAINTS OVER TIME (LINE CHART)                             │
+│                                                                │
+│ A trend line showing how many issues were submitted over the   │
+│ selected period. The X-axis labels change based on the time   │
+│ period:                                                        │
+│   • 24 Hours — 12am-6am, 6am-12pm, 12pm-6pm, 6pm-12am        │
+│   • 7 Days — Daily labels (e.g., "6/1", "6/2")               │
+│   • 30/90 Days — Date ranges (e.g., "6/1-6/7")               │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ AVERAGE RESOLUTION TIME BY CATEGORY (BAR CHART)               │
+│                                                                │
+│ Shows how long, on average, it takes to resolve issues in     │
+│ each category (measured from submission to completion).       │
+│                                                                │
+│ Durations are shown as:                                        │
+│   • Hours if less than 1 day (e.g., "18H")                   │
+│   • Days if 1 day or more (e.g., "3.5D")                     │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ TOP CATEGORY (KEY FINDING CARD)                               │
+│                                                                │
+│ Highlights the category with the most reports and shows what  │
+│ percentage of total complaints it represents.                 │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ MOST ACTIVE AREA (LOCATION CARD)                              │
+│                                                                │
+│ Shows which location/area has the highest number of reports   │
+│ in the selected period. Helps identify hotspots.              │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ TOP ENGAGEMENTS (LIST)                                        │
+│                                                                │
+│ Ranks issues by total engagement (likes + comments). Shows:   │
+│   • Issue category                                            │
+│   • Location                                                  │
+│   • Number of likes                                           │
+│   • Number of comments                                        │
+│                                                                │
+│ Use the dropdown to show Top 3, 5, 10, or 20 issues.         │
+└────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+CATEGORY MODE (SINGLE CATEGORY)
+═══════════════════════════════════════════════════════════════════
+
+When a specific category is selected (e.g., "Pothole"), the dashboard shows category-focused analytics:
+
+┌────────────────────────────────────────────────────────────────┐
+│ KEY METRICS (6 CARDS)                                          │
+│                                                                │
+│ • Unresolved — Issues in this category awaiting resolution    │
+│                                                                │
+│ • Solved — Issues in this category marked as completed        │
+│                                                                │
+│ • In Progress — Issues in this category being worked on       │
+│                                                                │
+│ • Longest Wait — The longest time an issue in this category   │
+│   took to resolve (with trend vs. previous period)            │
+│                                                                │
+│ • Shortest Wait — The shortest time an issue in this category │
+│   took to resolve (with trend vs. previous period)            │
+│                                                                │
+│ • Average Wait — Average resolution time for this category    │
+│   (with trend vs. previous period)                            │
+│                                                                │
+│ Trend indicators show ↑ or ↓ with a percentage comparing the  │
+│ current period to the previous one of the same length.        │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ COMPLAINTS BY AREA (BAR CHART)                                │
+│                                                                │
+│ Shows which locations have the most reports for this          │
+│ category. Use the dropdown to show Top 5, 10, or 20 areas.   │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ COMPLAINTS OVER TIME (LINE CHART)                             │
+│                                                                │
+│ Same as Overview mode, but filtered to show only this         │
+│ category's submission trend.                                  │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ MOST ACTIVE AREA (LOCATION CARD)                              │
+│                                                                │
+│ Shows the location with the most reports for this category.   │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ TOP ENGAGEMENTS (LIST)                                        │
+│                                                                │
+│ Same as Overview mode, but filtered to show only this         │
+│ category's most engaged issues.                               │
+└────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+HOW DATA IS CALCULATED
+═══════════════════════════════════════════════════════════════════
+
+  RESOLUTION TIME
+    Measured from the time the issue was submitted to when it was
+    marked as "Completed". Issues still in progress or submitted are
+    not included in resolution time calculations.
+
+  TIME PERIOD FILTERING
+    Issues are included if their submission date falls within the
+    selected period. For "Last 24 Hours", the period runs from
+    midnight to midnight.
+
+  TREND COMPARISON
+    When viewing a specific category, trend percentages compare the
+    current period to the immediately previous period of the same
+    length:
+      • Last 7 Days → compares to the 7 days before that
+      • Last 30 Days → compares to the 30 days before that
+      • Last 90 Days → compares to the 90 days before that
+
+  ENGAGEMENT RANKING
+    Issues are ranked by (likes + comments). If two issues have the
+    same total, the one with more comments ranks higher. If still tied,
+    the one with more likes ranks higher. If still tied, the most
+    recently updated issue ranks higher.
+
+═══════════════════════════════════════════════════════════════════
+LIVE UPDATES
+═══════════════════════════════════════════════════════════════════
+
+The insights dashboard updates automatically in real time when:
+  • A new issue is submitted
+  • An issue status changes (e.g., moves from "In Progress" to "Completed")
+  • An issue receives new likes or comments
+
+You don't need to manually refresh the page.
+
+═══════════════════════════════════════════════════════════════════
+💡 TIPS
+═══════════════════════════════════════════════════════════════════
+
+  • Use Overview mode to identify which categories need the most attention
+  • Switch to a specific category to see location hotspots for that issue type
+  • The "Most Active Area" card helps you see where problems are concentrated
+  • Top Engagements shows which issues the community cares about most
+  • Trend indicators help you see if resolution times are improving or worsening
+  • The "Unresolved" count includes both submitted and in-progress issues
+  • Deleted issues are excluded from all calculations

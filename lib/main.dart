@@ -9,7 +9,7 @@ import 'features/auth/auth_page.dart';
 import 'features/announcement/announcement_page.dart';
 import 'features/status_tracker/status_tracker_page.dart';
 import 'features/upvoting/upvoting_page.dart';
-import 'features/Profile/ProfilePage.dart';
+import 'features/Profile/profile_page.dart';
 import 'features/AI_chatbot/chatbot_button.dart';
 import 'features/AI_chatbot/chatbot_page.dart';
 import 'services/app_settings_service.dart';
@@ -90,16 +90,19 @@ class _RootNavigationState extends State<RootNavigation> {
               currentIndex: _selectedIndex,
               onTap: (index) => setState(() => _selectedIndex = index),
             ),
-      floatingActionButton: ChatbotFab(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const ChatbotPage(),
+      floatingActionButton: _selectedIndex == 3
+          ? null
+          : ChatbotFab(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ChatbotPage(onBack: () => Navigator.pop(context)),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }

@@ -14,6 +14,9 @@ class ChatMessage {
   /// When set, the assistant bubble renders a [DisruptionNoticeCard] instead of plain text.
   final DisruptionNotice? disruptionNotice;
 
+  /// When set, the assistant bubble renders a ticket card instead of plain text.
+  final Map<String, dynamic>? ticketData;
+
   /// Firebase Storage download URL for a user-uploaded chat image.
   final String? imageUrl;
 
@@ -23,6 +26,7 @@ class ChatMessage {
     required this.timestamp,
     this.showReportButton = false,
     this.disruptionNotice,
+    this.ticketData,
     this.imageUrl,
   });
 
@@ -51,6 +55,9 @@ class ChatMessage {
           ? DisruptionNotice.fromJson(
               json['disruption_notice'] as Map<String, dynamic>,
             )
+          : null,
+      ticketData: json['ticket'] != null
+          ? Map<String, dynamic>.from(json['ticket'] as Map)
           : null,
     );
   }

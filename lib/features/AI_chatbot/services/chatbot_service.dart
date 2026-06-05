@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import '../models/chat_message.dart';
@@ -86,7 +85,7 @@ class ChatbotService {
     if (sessionId != null) request.fields['session_id'] = sessionId;
     request.files.add(await http.MultipartFile.fromPath('document', documentPath));
 
-    final streamed = await request.send().timeout(const Duration(seconds: 180));
+    final streamed = await _client.send(request).timeout(const Duration(seconds: 180));
     final response = await http.Response.fromStream(streamed);
 
     if (response.statusCode == 200) {
@@ -116,7 +115,7 @@ class ChatbotService {
     if (sessionId != null) request.fields['session_id'] = sessionId;
     request.files.add(await http.MultipartFile.fromPath('image', imagePath));
 
-    final streamed = await request.send().timeout(const Duration(seconds: 180));
+    final streamed = await _client.send(request).timeout(const Duration(seconds: 180));
     final response = await http.Response.fromStream(streamed);
 
     if (response.statusCode == 200) {

@@ -147,41 +147,7 @@ class _LoginPageState extends State<LoginPage> {
         // ── Login button ──
         _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : PrimaryButton(label: 'Log in', onPressed: _login),
-        const SizedBox(height: 20),
-
-        // ── Or divider ──
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text('Or', style: tt.bodySmall),
-            ),
-            const Expanded(child: Divider()),
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        // ── Social login buttons ──
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _SocialButton(
-              assetPath: 'assets/icons/google.png',
-              onTap: () {
-                // TODO: Implement Google sign-in
-              },
-            ),
-            const SizedBox(width: 24),
-            _SocialButton(
-              assetPath: 'assets/icons/facebook.png',
-              onTap: () {
-                // TODO: Implement Facebook sign-in
-              },
-            ),
-          ],
-        ),
+            : PrimaryButton(label: 'Sign In', onPressed: _login),
       ],
     );
   }
@@ -232,39 +198,4 @@ class _InputField extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Social Button
-// ─────────────────────────────────────────────────────────────────────────────
 
-class _SocialButton extends StatelessWidget {
-  final String assetPath;
-  final VoidCallback? onTap;
-
-  const _SocialButton({
-    required this.assetPath,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFD1D5DB)),
-        ),
-        child: ClipOval(
-          child: Image.asset(
-            assetPath,
-            width: 32,
-            height: 32,
-            fit: BoxFit.contain,
-          ),
-        ),
-      ),
-    );
-  }
-}

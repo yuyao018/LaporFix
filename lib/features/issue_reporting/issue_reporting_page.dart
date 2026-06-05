@@ -10,6 +10,7 @@ import '../issue_reporting/issue_reporting_map.dart';
 
 class IssueReportingPage extends StatefulWidget {
   const IssueReportingPage({super.key});
+  const IssueReportingPage({super.key});
 
   VoidCallback? get onBack => null;
 
@@ -452,8 +453,10 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                       return; // Prevent navigation
                                     }
 
-                                    // Show loading indicator while fetching location
+                                    // Capture navigator before async gap
+                                    final navigator = Navigator.of(context);
 
+                                    // Show loading indicator while fetching location
                                     showDialog(
                                       context: context,
                                       barrierDismissible: false,
@@ -464,11 +467,9 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
 
                                     await viewModel.getCurrentLocation();
 
-                                    if (!context.mounted) return;
-
-                                    Navigator.pop(context);
-                                    Navigator.push(
-                                      context,
+                                    if (!mounted) return;
+                                    navigator.pop();
+                                    navigator.push(
                                       MaterialPageRoute(
                                         builder: (_) => IssueReportingMap(
                                           viewModel: viewModel,
