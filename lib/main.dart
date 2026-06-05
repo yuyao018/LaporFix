@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'widgets/bottom_navbar.dart';
 import 'theme/app_theme.dart';
@@ -11,6 +12,7 @@ import 'features/upvoting/upvoting_page.dart';
 import 'features/Profile/profile_page.dart';
 import 'features/AI_chatbot/chatbot_button.dart';
 import 'features/AI_chatbot/chatbot_page.dart';
+import 'features/AI_chatbot/view_models/chat_view_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -90,8 +92,11 @@ class _RootNavigationState extends State<RootNavigation> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        ChatbotPage(onBack: () => Navigator.pop(context)),
+                    builder: (_) => ChangeNotifierProvider(
+                      create: (_) => ChatViewModel(),
+                      child: ChatbotPage(
+                          onBack: () => Navigator.pop(context)),
+                    ),
                   ),
                 );
               },
