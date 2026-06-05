@@ -58,11 +58,22 @@ class _AnnouncementPageState extends State<AnnouncementPage> {
   /// Filter announcements by user's home location and search query.
   /// By default, only shows announcements matching the user's area/state.
   /// When searching, matches against title, caption, AND location fields.
+  /// Past announcements (created before today) are always excluded.
   List<QueryDocumentSnapshot> _filterDocs(List<QueryDocumentSnapshot> docs) {
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+
     return docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final isDeleted = data['isDeleted'] ?? false;
       if (isDeleted == true) return false;
+
+      // Only show announcements from today onwards
+      final createdAt = data['createdAt'];
+      if (createdAt is Timestamp) {
+        final created = createdAt.toDate();
+        if (created.isBefore(startOfToday)) return false;
+      }
 
       // Extract announcement location
       final target = data['target'] as Map<String, dynamic>? ?? {};
@@ -200,7 +211,7 @@ class _AnnouncementPageState extends State<AnnouncementPage> {
               // ── Announcement list ──
               Expanded(
                 child: filtered.isEmpty
-                    ? const Center(child: Text('No announcements found.'))
+                    ? const Center(child: Text('No upcoming announcements.'))
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: filtered.length,

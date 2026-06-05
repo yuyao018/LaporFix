@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'models/chat_session.dart';
-import 'services/chatbot_service.dart';
+import 'view_models/chat_view_model.dart';
 
 class ChatHistoryPage extends StatefulWidget {
   const ChatHistoryPage({super.key});
@@ -10,25 +12,25 @@ class ChatHistoryPage extends StatefulWidget {
 }
 
 class _ChatHistoryPageState extends State<ChatHistoryPage> {
-  final ChatbotService _service = ChatbotService();
   late Future<List<ChatSession>> _sessionsFuture;
 
   @override
   void initState() {
     super.initState();
-    _sessionsFuture = _service.fetchSessions();
+    _load();
   }
 
-  void _refresh() {
+  void _load() {
     setState(() {
-      _sessionsFuture = _service.fetchSessions();
+      _sessionsFuture =
+          context.read<ChatViewModel>().fetchSessions();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5), // WhatsApp-like grey bg
+      backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF5F80F8),
         foregroundColor: Colors.white,
@@ -40,7 +42,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
+            onPressed: _load,
             tooltip: 'Refresh',
           ),
         ],
@@ -64,7 +66,8 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 16),
-                  TextButton(onPressed: _refresh, child: const Text('Retry')),
+                  TextButton(
+                      onPressed: _load, child: const Text('Retry')),
                 ],
               ),
             );
@@ -82,14 +85,14 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                   Text(
                     'No conversations yet.\nStart chatting with LAPI!',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 15),
+                    style:
+                        TextStyle(color: Colors.grey[600], fontSize: 15),
                   ),
                 ],
               ),
             );
           }
 
-          // Group sessions by date
           final grouped = _groupByDate(sessions);
 
           return ListView.builder(
@@ -97,7 +100,6 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
             itemBuilder: (context, i) {
               final entry = grouped[i];
 
-              // Date header
               if (entry is String) {
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -113,35 +115,35 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                 );
               }
 
-              // Session tile
               final session = entry as ChatSession;
               return _SessionTile(
                 session: session,
                 onTap: () => Navigator.pop(context, session),
                 onDelete: () async {
-                  await _service.resetSession(session.sessionId);
-                  _refresh();
+                  await context
+                      .read<ChatViewModel>()
+                      .deleteSession(session.sessionId);
+                  _load();
                 },
               );
             },
           );
         },
       ),
-      // New chat FAB
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pop(context, null), // null = new session
+        onPressed: () =>
+            Navigator.pop(context, null), // null = new session
         backgroundColor: const Color(0xFF5F80F8),
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Chat', style: TextStyle(color: Colors.white)),
+        label:
+            const Text('New Chat', style: TextStyle(color: Colors.white)),
       ),
     );
   }
 
-  /// Returns a flat list alternating between String (date headers) and ChatSession.
   List<Object> _groupByDate(List<ChatSession> sessions) {
     final result = <Object>[];
     String? lastLabel;
-
     for (final session in sessions) {
       final label = _dateLabel(session.updatedAt);
       if (label != lastLabel) {
@@ -159,7 +161,6 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
     final today = DateTime(now.year, now.month, now.day);
     final date = DateTime(dt.year, dt.month, dt.day);
     final diff = today.difference(date).inDays;
-
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Yesterday';
     if (diff < 7) return '$diff days ago';
@@ -167,7 +168,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
   }
 }
 
-// ── Session tile (WhatsApp-style) ─────────────────────────────────────────────
+// ── Session tile ──────────────────────────────────────────────────────────────
 class _SessionTile extends StatelessWidget {
   final ChatSession session;
   final VoidCallback onTap;
@@ -181,9 +182,8 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final time = session.updatedAt != null
-        ? _formatTime(session.updatedAt!)
-        : '';
+    final time =
+        session.updatedAt != null ? _formatTime(session.updatedAt!) : '';
 
     return Dismissible(
       key: Key(session.sessionId),
@@ -192,23 +192,24 @@ class _SessionTile extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         color: Colors.red,
-        child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+        child: const Icon(Icons.delete_outline,
+            color: Colors.white, size: 28),
       ),
       confirmDismiss: (_) async {
         return await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Delete conversation?'),
-            content: const Text('This will permanently delete this chat history.'),
+            content: const Text(
+                'This will permanently delete this chat history.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel'),
-              ),
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel')),
               TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Delete', style: TextStyle(color: Colors.red)),
-              ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Delete',
+                      style: TextStyle(color: Colors.red))),
             ],
           ),
         );
@@ -217,14 +218,18 @@ class _SessionTile extends StatelessWidget {
       child: Container(
         color: Colors.white,
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: CircleAvatar(
             radius: 26,
             backgroundColor: const Color(0xFFE8ECFF),
-            child: Image.asset('assets/icons/lapo_robot.png', width: 30),
+            child:
+                Image.asset('assets/icons/lapo_robot.png', width: 30),
           ),
           title: Text(
-            session.preview.isNotEmpty ? session.preview : 'Chat session',
+            session.preview.isNotEmpty
+                ? session.preview
+                : 'Chat session',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -237,13 +242,13 @@ class _SessionTile extends StatelessWidget {
             padding: const EdgeInsets.only(top: 2),
             child: Text(
               '${session.sessionId.substring(0, 8)}...',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              style:
+                  TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
           ),
-          trailing: Text(
-            time,
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-          ),
+          trailing: Text(time,
+              style:
+                  TextStyle(fontSize: 12, color: Colors.grey[500])),
           onTap: onTap,
         ),
       ),
@@ -254,7 +259,6 @@ class _SessionTile extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final date = DateTime(dt.year, dt.month, dt.day);
-
     if (date == today) {
       return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
