@@ -38,7 +38,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
 
   @override
   Widget build(BuildContext context) {
-    bool isOtherSelected = viewModel.report.category == 'Other';
+    bool isOtherSelected = viewModel.isOtherCategorySelected;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -311,7 +311,10 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                 TextField(
                                   style: const TextStyle(fontSize: 16),
                                   controller: viewModel.categoryController,
-                                  onChanged: viewModel.updateCategory,
+                                  onChanged: (value) {
+                                    viewModel.updateCustomCategory(value);
+                                    setState(() {});
+                                  },
                                   maxLength: 12,
                                   decoration: InputDecoration(
                                     hintText: 'Enter your category',
@@ -441,7 +444,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                       ).showSnackBar(
                                         const SnackBar(
                                           content: Text(
-                                            'Please upload a photo, select a category, and add a description.',
+                                            'Please upload a photo, select a category, and add a description. If you choose Other, enter the category name.',
                                           ),
 
                                           backgroundColor: Colors.redAccent,

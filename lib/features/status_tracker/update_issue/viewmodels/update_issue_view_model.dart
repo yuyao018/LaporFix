@@ -7,6 +7,16 @@ import '../data/update_issue_repository.dart';
 import '../models/proof_attachment.dart';
 import '../models/update_issue_draft.dart';
 
+class EstimatedResolutionOption {
+  const EstimatedResolutionOption({
+    required this.label,
+    required this.duration,
+  });
+
+  final String label;
+  final Duration duration;
+}
+
 /// ViewModel for update issue flow
 class UpdateIssueViewModel extends ChangeNotifier {
   UpdateIssueViewModel({required this.issue, UpdateIssueRepository? repository})
@@ -48,6 +58,53 @@ class UpdateIssueViewModel extends ChangeNotifier {
     IssueStatus.completed,
   ];
 
+  List<EstimatedResolutionOption> get estimatedResolutionOptions {
+    return const [
+      EstimatedResolutionOption(label: '1h', duration: Duration(hours: 1)),
+      EstimatedResolutionOption(label: '2h', duration: Duration(hours: 2)),
+      EstimatedResolutionOption(label: '3h', duration: Duration(hours: 3)),
+      EstimatedResolutionOption(label: '4h', duration: Duration(hours: 4)),
+      EstimatedResolutionOption(label: '5h', duration: Duration(hours: 5)),
+      EstimatedResolutionOption(label: '6h', duration: Duration(hours: 6)),
+      EstimatedResolutionOption(label: '7h', duration: Duration(hours: 7)),
+      EstimatedResolutionOption(label: '8h', duration: Duration(hours: 8)),
+      EstimatedResolutionOption(label: '9h', duration: Duration(hours: 9)),
+      EstimatedResolutionOption(label: '10h', duration: Duration(hours: 10)),
+      EstimatedResolutionOption(label: '11h', duration: Duration(hours: 11)),
+      EstimatedResolutionOption(label: '12h', duration: Duration(hours: 12)),
+      EstimatedResolutionOption(label: '13h', duration: Duration(hours: 13)),
+      EstimatedResolutionOption(label: '14h', duration: Duration(hours: 14)),
+      EstimatedResolutionOption(label: '15h', duration: Duration(hours: 15)),
+      EstimatedResolutionOption(label: '16h', duration: Duration(hours: 16)),
+      EstimatedResolutionOption(label: '17h', duration: Duration(hours: 17)),
+      EstimatedResolutionOption(label: '18h', duration: Duration(hours: 18)),
+      EstimatedResolutionOption(label: '19h', duration: Duration(hours: 19)),
+      EstimatedResolutionOption(label: '20h', duration: Duration(hours: 20)),
+      EstimatedResolutionOption(label: '21h', duration: Duration(hours: 21)),
+      EstimatedResolutionOption(label: '22h', duration: Duration(hours: 22)),
+      EstimatedResolutionOption(label: '23h', duration: Duration(hours: 23)),
+      EstimatedResolutionOption(label: '1d', duration: Duration(days: 1)),
+      EstimatedResolutionOption(label: '2d', duration: Duration(days: 2)),
+      EstimatedResolutionOption(label: '3d', duration: Duration(days: 3)),
+      EstimatedResolutionOption(label: '4d', duration: Duration(days: 4)),
+      EstimatedResolutionOption(label: '5d', duration: Duration(days: 5)),
+      EstimatedResolutionOption(label: '6d', duration: Duration(days: 6)),
+      EstimatedResolutionOption(label: '7d', duration: Duration(days: 7)),
+    ];
+  }
+
+  int get selectedEstimatedResolutionIndex {
+    final selectedDuration = _draft.estimatedResolutionDuration;
+    final index = estimatedResolutionOptions.indexWhere(
+      (option) => option.duration == selectedDuration,
+    );
+
+    return index < 0 ? 0 : index;
+  }
+
+  String get selectedEstimatedResolutionLabel =>
+      estimatedResolutionOptions[selectedEstimatedResolutionIndex].label;
+
   String? get reportImageUrl =>
       issue.reportImages.isEmpty ? null : issue.reportImages.first.trim();
 
@@ -60,6 +117,16 @@ class UpdateIssueViewModel extends ChangeNotifier {
   void selectStatus(IssueStatus? status) {
     if (_draft.selectedStatus == status) return;
     _draft = _draft.copyWith(selectedStatus: status);
+    notifyListeners();
+  }
+
+  void selectEstimatedResolutionIndex(int index) {
+    if (index < 0 || index >= estimatedResolutionOptions.length) return;
+
+    final duration = estimatedResolutionOptions[index].duration;
+    if (_draft.estimatedResolutionDuration == duration) return;
+
+    _draft = _draft.copyWith(estimatedResolutionDuration: duration);
     notifyListeners();
   }
 
@@ -96,7 +163,13 @@ class UpdateIssueViewModel extends ChangeNotifier {
     }
 
     await _save(() {
-      return _repository.updateStatus(issueId: issue.id, status: status);
+      return _repository.updateStatus(
+        issueId: issue.id,
+        status: status,
+        estimatedResolutionDuration: status == IssueStatus.inProgress
+            ? _draft.estimatedResolutionDuration
+            : null,
+      );
     });
   }
 

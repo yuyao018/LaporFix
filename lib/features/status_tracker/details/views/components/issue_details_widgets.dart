@@ -7,7 +7,7 @@ import '../../viewmodels/issue_details_view_model.dart';
 
 const double _imagePreviewRadius = 12;
 
-// card with issue title, category, location, date, id, report image.
+// card with issue title, location, date, id, report image.
 class IssueReportHeaderCard extends StatelessWidget {
   const IssueReportHeaderCard({super.key, required this.viewModel});
 
@@ -38,11 +38,6 @@ class IssueReportHeaderCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                _InfoLine(
-                  icon: Icons.folder_rounded,
-                  iconColor: const Color(0xFFFFC978),
-                  text: 'Category: ${issue.category}',
-                ),
                 _InfoLine(
                   icon: Icons.location_on,
                   iconColor: const Color(0xFFFF5B5B),

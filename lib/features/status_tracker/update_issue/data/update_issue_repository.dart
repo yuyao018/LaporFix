@@ -21,10 +21,17 @@ class UpdateIssueRepository {
   Future<void> updateStatus({
     required String issueId,
     required IssueStatus status,
+    Duration? estimatedResolutionDuration,
   }) async {
     await _requireAdmin();
 
     final changedAt = Timestamp.now();
+    final estimatedResolutionAt =
+        status == IssueStatus.inProgress && estimatedResolutionDuration != null
+        ? Timestamp.fromDate(
+            changedAt.toDate().add(estimatedResolutionDuration),
+          )
+        : null;
 
     return _firestore.runTransaction((transaction) async {
       final issueRef = _issueDocument(issueId);
@@ -32,11 +39,15 @@ class UpdateIssueRepository {
       final timeline = _readStatusChangedAt(snapshot.data());
       // only update slot for chosen status
       timeline[_statusTimelineIndex(status)] = changedAt;
-
-      transaction.update(issueRef, {
+      final updates = <String, Object?>{
         'status': status.label,
         'statusChangedAt': timeline,
-      });
+      };
+      if (estimatedResolutionAt != null) {
+        updates['estimatedResolutionAt'] = estimatedResolutionAt;
+      }
+
+      transaction.update(issueRef, updates);
     });
   }
 

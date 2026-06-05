@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../theme/app_theme.dart';
@@ -84,6 +85,12 @@ class UpdateIssueCard extends StatelessWidget {
           _SectionLabel(text: 'Update Status'),
           const SizedBox(height: 6),
           _StatusDropdown(viewModel: viewModel),
+          if (viewModel.draft.selectedStatus == IssueStatus.inProgress) ...[
+            const SizedBox(height: 12),
+            _SectionLabel(text: 'Estimated Resolution'),
+            const SizedBox(height: 6),
+            _EstimatedResolutionPicker(viewModel: viewModel),
+          ],
         ],
       ),
     );
@@ -552,6 +559,52 @@ class _StatusDropdown extends StatelessWidget {
         color: Colors.black,
         fontSize: 14,
         fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+class _EstimatedResolutionPicker extends StatelessWidget {
+  const _EstimatedResolutionPicker({required this.viewModel});
+
+  final UpdateIssueViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = viewModel.estimatedResolutionOptions;
+
+    return Container(
+      height: 118,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F2F5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFD0D5DD)),
+      ),
+      child: CupertinoPicker(
+        scrollController: FixedExtentScrollController(
+          initialItem: viewModel.selectedEstimatedResolutionIndex,
+        ),
+        itemExtent: 34,
+        magnification: 1.06,
+        squeeze: 1.08,
+        useMagnifier: true,
+        selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(
+          background: Color(0x1A315DFF),
+        ),
+        onSelectedItemChanged: viewModel.selectEstimatedResolutionIndex,
+        children: [
+          for (final option in options)
+            Center(
+              child: Text(
+                option.label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

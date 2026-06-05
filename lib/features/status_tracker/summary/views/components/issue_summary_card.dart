@@ -65,11 +65,6 @@ class IssueSummaryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     _MetaRow(
-                      icon: Icons.folder_rounded,
-                      iconColor: const Color(0xFFFFC978),
-                      text: 'Category: ${issue.category}',
-                    ),
-                    _MetaRow(
                       icon: Icons.location_on,
                       iconColor: const Color(0xFFFF5B5B),
                       text: issue.location.displayName,

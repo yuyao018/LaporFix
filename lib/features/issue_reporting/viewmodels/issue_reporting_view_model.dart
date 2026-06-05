@@ -117,6 +117,14 @@ class IssueReportingViewModel extends ChangeNotifier {
   // UPDATE FORM DATA
   void updateCategory(String? value) {
     report.category = value ?? '';
+    if (!isOtherCategorySelected) {
+      categoryController.clear();
+    }
+    _scheduleDraftSave();
+    notifyListeners();
+  }
+
+  void updateCustomCategory(String value) {
     _scheduleDraftSave();
     notifyListeners();
   }
@@ -141,7 +149,7 @@ class IssueReportingViewModel extends ChangeNotifier {
   // Validate image, category, and description fields
   bool validateStepOne() {
     return report.image != null &&
-        report.category.isNotEmpty &&
+        resolvedCategory.isNotEmpty &&
         report.description.isNotEmpty;
   }
 
@@ -206,16 +214,16 @@ class IssueReportingViewModel extends ChangeNotifier {
       // STEP B: Save report data to Firestore 'issue' collection
       final String currentUserId =
           FirebaseAuth.instance.currentUser?.uid ?? 'anonymous_user';
+      final issueCategory = resolvedCategory;
+      if (issueCategory.isEmpty) {
+        throw StateError('Enter a category before submitting the report.');
+      }
 
       // Save report into the required 'issue' collection！
       await _firestore.collection('issue').add({
         // Basic report information
-        'title': report.category.isEmpty
-            ? categoryController.text
-            : report.category,
-        'category': report.category.isEmpty
-            ? categoryController.text
-            : report.category,
+        'title': issueCategory,
+        'category': issueCategory,
         'description': report.description.isEmpty
             ? descriptionController.text
             : report.description,
@@ -404,7 +412,14 @@ class IssueReportingViewModel extends ChangeNotifier {
     final data = snapshot.data();
     if (data == null) return;
 
-    report.category = data['category']?.toString() ?? '';
+    final savedCategory = data['category']?.toString().trim() ?? '';
+    if (savedCategory.isNotEmpty && !categories.contains(savedCategory)) {
+      report.category = 'Other';
+      categoryController.text = savedCategory;
+    } else {
+      report.category = savedCategory;
+      categoryController.clear();
+    }
     report.description = data['description']?.toString() ?? '';
     report.locationName = data['locationName']?.toString() ?? '';
     report.addressDetails = data['addressDetails']?.toString() ?? '';
@@ -416,7 +431,6 @@ class IssueReportingViewModel extends ChangeNotifier {
       currentPosition = LatLng(report.latitude!, report.longitude!);
     }
 
-    categoryController.text = report.category;
     descriptionController.text = report.description;
     addressController.text = report.locationName;
     addressDetailsController.text = report.addressDetails;
@@ -460,7 +474,7 @@ class IssueReportingViewModel extends ChangeNotifier {
     if (ref == null || !_hasDraftContent) return;
 
     await ref.set({
-      'category': report.category.trim(),
+      'category': resolvedCategory,
       'description': report.description.trim(),
       'locationName': addressController.text.trim().isNotEmpty
           ? addressController.text.trim()
@@ -476,11 +490,22 @@ class IssueReportingViewModel extends ChangeNotifier {
   }
 
   bool get _hasDraftContent {
-    return report.category.trim().isNotEmpty ||
+    return resolvedCategory.isNotEmpty ||
         report.description.trim().isNotEmpty ||
         addressController.text.trim().isNotEmpty ||
         addressDetailsController.text.trim().isNotEmpty ||
         additionalNotesController.text.trim().isNotEmpty;
+  }
+
+  bool get isOtherCategorySelected =>
+      report.category.trim().toLowerCase() == 'other';
+
+  String get resolvedCategory {
+    if (isOtherCategorySelected) {
+      return categoryController.text.trim();
+    }
+
+    return report.category.trim();
   }
 
   DocumentReference<Map<String, dynamic>>? _draftRef() {

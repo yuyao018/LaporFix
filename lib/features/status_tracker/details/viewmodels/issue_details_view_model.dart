@@ -55,8 +55,11 @@ class IssueDetailsViewModel {
 
   String get lastUpdatedText => _formatDateTime(issue.latestStatusChangedAt);
 
-  String get estimatedResolutionText =>
-      _formatDate(issue.estimatedResolutionAt);
+  String get estimatedResolutionText {
+    final date = issue.estimatedResolutionAt;
+    if (date == null) return 'N/A';
+    return DateFormat('MMM d, h:mm a').format(date);
+  }
 
   String get averageResolutionText {
     final durations = _completedDurationsForCategory();
@@ -151,11 +154,6 @@ class IssueDetailsViewModel {
       IssueStatus.inProgress => 1,
       IssueStatus.submitted || IssueStatus.all || IssueStatus.unknown => 0,
     };
-  }
-
-  String _formatDate(DateTime? date) {
-    if (date == null) return '-';
-    return DateFormat('MMM d, yyyy').format(date);
   }
 
   String _formatDateTime(DateTime? date) {
