@@ -10,7 +10,6 @@ import '../issue_reporting/issue_reporting_map.dart';
 
 class IssueReportingPage extends StatefulWidget {
   const IssueReportingPage({super.key});
-  const IssueReportingPage({super.key});
 
   VoidCallback? get onBack => null;
 
