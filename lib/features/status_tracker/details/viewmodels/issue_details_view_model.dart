@@ -12,10 +12,12 @@ class IssueDetailsViewModel {
   IssueDetailsViewModel({
     required this.issue,
     this.systemIssues = const <IssueSummary>[],
+    this.canEditStatus = false,
   });
 
   final IssueSummary issue;
   final List<IssueSummary> systemIssues;
+  final bool canEditStatus;
 
   DateTime? get submittedAt => issue.submittedAt;
 

@@ -4,6 +4,7 @@ const {
   onDocumentCreated,
   onDocumentUpdated,
 } = require("firebase-functions/v2/firestore");
+const { setGlobalOptions } = require("firebase-functions/v2");
 
 // used to print logs in Firebase Functions console.
 const logger = require("firebase-functions/logger");
@@ -17,6 +18,7 @@ const { getMessaging } = require("firebase-admin/messaging");
 // Initialize Firebase Admin SDK.
 // This is required before using Firestore or FCM from backend functions.
 initializeApp();
+setGlobalOptions({ region: "asia-southeast1" });
 
 // FCM multicast sending supports a maximum of 500 tokens per request.
 // Therefore, tokens must be split into batches of 500.
@@ -270,10 +272,20 @@ exports.sendIssueStatusUpdateNotification = onDocumentUpdated(
     if (!nextStatus || previousStatus === nextStatus) return;
 
     // Get the reporter user ID from the issue document.
-    const reporterId = String(after.reporterID || "").trim();
+    // reporterID is the current app field. Other keys support older documents.
+    const reporterId = firstString(after, [
+      "reporterID",
+      "reporterId",
+      "userID",
+      "userId",
+      "createdBy",
+    ]);
 
     // Do not send notification if reporter is missing or anonymous.
-    if (!reporterId || reporterId === "anonymous_user") return;
+    if (!reporterId || reporterId === "anonymous_user") {
+      logger.info("Issue status FCM skipped: missing reporter", { issueId });
+      return;
+    }
 
     // Get Firestore database instance.
     const db = getFirestore();
@@ -282,18 +294,36 @@ exports.sendIssueStatusUpdateNotification = onDocumentUpdated(
     const reporterDoc = await db.collection("users").doc(reporterId).get();
 
     // If reporter user document does not exist, stop.
-    if (!reporterDoc.exists) return;
+    if (!reporterDoc.exists) {
+      logger.info("Issue status FCM skipped: reporter not found", {
+        issueId,
+        reporterId,
+      });
+      return;
+    }
 
     const reporterData = reporterDoc.data() || {};
 
     // Check whether reporter allows status update notifications.
-    if (!canReceiveNotification(reporterData, "statusUpdates")) return;
+    if (!canReceiveNotification(reporterData, "statusUpdates")) {
+      logger.info("Issue status FCM skipped: reporter opted out", {
+        issueId,
+        reporterId,
+      });
+      return;
+    }
 
     // Extract reporter's FCM tokens.
     const tokens = extractTokens(reporterData);
 
     // If reporter has no FCM token, stop.
-    if (tokens.length === 0) return;
+    if (tokens.length === 0) {
+      logger.info("Issue status FCM skipped: reporter has no FCM token", {
+        issueId,
+        reporterId,
+      });
+      return;
+    }
 
     // Prepare token owner map.
     // Here, all tokens belong to the reporter.
@@ -313,6 +343,7 @@ exports.sendIssueStatusUpdateNotification = onDocumentUpdated(
         type: "issue_status_update",
         route: "issue_detail",
         issueId,
+        status: nextStatus,
       },
 
       // Android-specific notification configuration.
@@ -386,6 +417,20 @@ function extractTokens(userData) {
 }
 
 /**
+ * Read the first non-empty string from a list of possible field names.
+ */
+function firstString(data, keys) {
+  for (const key of keys) {
+    const value = data?.[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+}
+
+/**
  * Send FCM notification to multiple tokens.
  *
  * Automatically splits tokens into batches of 500.
@@ -427,11 +472,35 @@ async function sendMulticast(tokens, payload) {
  *
  * Note:
  * If the setting does not exist, notification is allowed by default.
- * Only when the setting is exactly false, notification is blocked.
+ * Boolean false and common false-like strings block notification.
  */
 function canReceiveNotification(userData, settingKey) {
-  const appSettings = userData.appSettings || {};
-  return appSettings[settingKey] !== false;
+  const settingSources = [
+    userData.appSettings,
+    userData.notificationSettings,
+    userData.notifications,
+    userData,
+  ];
+
+  for (const source of settingSources) {
+    if (!isObject(source)) continue;
+    if (!Object.prototype.hasOwnProperty.call(source, settingKey)) continue;
+    return settingAllowsNotification(source[settingKey]);
+  }
+
+  return true;
+}
+
+function settingAllowsNotification(value) {
+  if (value === false) return false;
+  if (typeof value !== "string") return true;
+
+  const normalized = normalize(value);
+  return !["false", "0", "off", "no"].includes(normalized);
+}
+
+function isObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**

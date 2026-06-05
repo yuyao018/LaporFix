@@ -20,11 +20,17 @@ class IssueDetailsView extends StatelessWidget {
       appBar: FunctionAppBar(
         title: 'Report Status',
         showHistory: false,
-        trailingAction: IconButton(
-          tooltip: 'App settings',
-          icon: const Icon(Icons.edit_rounded, color: Colors.black, size: 28),
-          onPressed: () => _openUpdateIssue(context),
-        ),
+        trailingAction: viewModel.canEditStatus
+            ? IconButton(
+                tooltip: 'Update report status',
+                icon: const Icon(
+                  Icons.edit_rounded,
+                  color: Colors.black,
+                  size: 28,
+                ),
+                onPressed: () => _openUpdateIssue(context),
+              )
+            : null,
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.functionBackground),

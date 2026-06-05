@@ -21,7 +21,9 @@ class UpdateIssueRepository {
   Future<void> updateStatus({
     required String issueId,
     required IssueStatus status,
-  }) {
+  }) async {
+    await _requireAdmin();
+
     final changedAt = Timestamp.now();
 
     return _firestore.runTransaction((transaction) async {
@@ -43,6 +45,8 @@ class UpdateIssueRepository {
     required String description,
     required List<ProofAttachment> proofAttachments,
   }) async {
+    await _requireAdmin();
+
     // proof files must be uploaded first to get URLs
     // then only can write completion details
     final completedBy = await _completedByText();
@@ -161,5 +165,22 @@ class UpdateIssueRepository {
             .trim();
 
     return '${username.isEmpty ? 'User' : username} (${user.uid})';
+  }
+
+  Future<void> _requireAdmin() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('Sign in as an admin before updating report status.');
+    }
+
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    final role = (doc.data()?['role'] ?? 'user')
+        .toString()
+        .trim()
+        .toLowerCase();
+
+    if (role != 'admin') {
+      throw StateError('Only admins can update report status.');
+    }
   }
 }

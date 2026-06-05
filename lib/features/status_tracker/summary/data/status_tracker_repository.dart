@@ -44,6 +44,18 @@ class StatusTrackerRepository {
     });
   }
 
+  Stream<bool> watchCurrentUserIsAdmin() {
+    return _auth.authStateChanges().asyncExpand((user) {
+      if (user == null) return Stream.value(false);
+
+      return _firestore.collection('users').doc(user.uid).snapshots().map((
+        doc,
+      ) {
+        return _normalizeRole(doc.data()?['role']) == 'admin';
+      });
+    });
+  }
+
   // Allows the detail page can refresh immediately after an update
   Stream<IssueSummary> watchIssue(String issueId) {
     return _firestore.collection(collectionPath).doc(issueId).snapshots().map((
@@ -76,6 +88,10 @@ class StatusTrackerRepository {
     // missing role defaults to user
     // cannot fallback to admin to get full access
     final doc = await _firestore.collection('users').doc(userId).get();
-    return (doc.data()?['role'] ?? 'user').toString().trim().toLowerCase();
+    return _normalizeRole(doc.data()?['role']);
+  }
+
+  String _normalizeRole(Object? value) {
+    return (value ?? 'user').toString().trim().toLowerCase();
   }
 }

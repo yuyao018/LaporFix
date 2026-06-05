@@ -22,6 +22,7 @@ class _IssueDetailsPageState extends State<IssueDetailsPage> {
   // keeps detail screen after update_issue writes without reloading the whole summary list
   late final Stream<IssueSummary> _issueStream;
   late final Stream<List<IssueSummary>> _systemIssuesStream;
+  late final Stream<bool> _isAdminStream;
 
   @override
   void initState() {
@@ -31,25 +32,34 @@ class _IssueDetailsPageState extends State<IssueDetailsPage> {
     // this stream replaces it after a status update.
     _issueStream = _repository.watchIssue(widget.issue.id);
     _systemIssuesStream = _repository.watchSystemIssues();
+    _isAdminStream = _repository.watchCurrentUserIsAdmin();
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<IssueSummary>>(
-      stream: _systemIssuesStream,
-      builder: (context, systemSnapshot) {
-        final systemIssues = systemSnapshot.data ?? const <IssueSummary>[];
+    return StreamBuilder<bool>(
+      stream: _isAdminStream,
+      builder: (context, roleSnapshot) {
+        final canEditStatus = roleSnapshot.data == true;
 
-        return StreamBuilder<IssueSummary>(
-          stream: _issueStream,
-          builder: (context, snapshot) {
-            // use tapped issue until the first snapshot arrives
-            final issue = snapshot.data ?? widget.issue;
-            return IssueDetailsView(
-              viewModel: IssueDetailsViewModel(
-                issue: issue,
-                systemIssues: systemIssues,
-              ),
+        return StreamBuilder<List<IssueSummary>>(
+          stream: _systemIssuesStream,
+          builder: (context, systemSnapshot) {
+            final systemIssues = systemSnapshot.data ?? const <IssueSummary>[];
+
+            return StreamBuilder<IssueSummary>(
+              stream: _issueStream,
+              builder: (context, snapshot) {
+                // use tapped issue until the first snapshot arrives
+                final issue = snapshot.data ?? widget.issue;
+                return IssueDetailsView(
+                  viewModel: IssueDetailsViewModel(
+                    issue: issue,
+                    systemIssues: systemIssues,
+                    canEditStatus: canEditStatus,
+                  ),
+                );
+              },
             );
           },
         );
