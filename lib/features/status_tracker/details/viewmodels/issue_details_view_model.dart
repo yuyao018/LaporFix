@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:intl/intl.dart';
 
 import '../../summary/models/issue_status.dart';
@@ -7,9 +9,13 @@ import '../models/issue_detail_models.dart';
 // for the report status detail page.
 // adapts from IssueSummary into display
 class IssueDetailsViewModel {
-  IssueDetailsViewModel({required this.issue});
+  IssueDetailsViewModel({
+    required this.issue,
+    this.systemIssues = const <IssueSummary>[],
+  });
 
   final IssueSummary issue;
+  final List<IssueSummary> systemIssues;
 
   DateTime? get submittedAt => issue.submittedAt;
 
@@ -51,7 +57,9 @@ class IssueDetailsViewModel {
       _formatDate(issue.estimatedResolutionAt);
 
   String get averageResolutionText {
-    return 'InProgress';
+    final durations = _completedDurationsForCategory();
+    if (durations.isEmpty) return 'N/A';
+    return _formatDays(_average(durations));
   }
 
   int get similarReportCount => issue.engagement.likesCount;
@@ -151,6 +159,45 @@ class IssueDetailsViewModel {
   String _formatDateTime(DateTime? date) {
     if (date == null) return '-';
     return DateFormat('MMM d, yyyy h:mm a').format(date);
+  }
+
+  List<double> _completedDurationsForCategory() {
+    final targetCategory = _normalizeCategory(issue.category);
+    if (targetCategory.isEmpty) return const [];
+
+    return systemIssues
+        .where((systemIssue) => !systemIssue.isDeleted)
+        .where(
+          (systemIssue) =>
+              _normalizeCategory(systemIssue.category) == targetCategory,
+        )
+        .map(_completionDurationDays)
+        .whereType<double>()
+        .toList(growable: false);
+  }
+
+  double? _completionDurationDays(IssueSummary issue) {
+    final submittedAt = issue.submittedAt;
+    final completedAt = issue.completedAt;
+    if (submittedAt == null || completedAt == null) return null;
+    if (completedAt.isBefore(submittedAt)) return null;
+    final hours = max(1, completedAt.difference(submittedAt).inHours);
+    return hours / 24;
+  }
+
+  double _average(List<double> values) {
+    if (values.isEmpty) return 0;
+    return values.reduce((left, right) => left + right) / values.length;
+  }
+
+  String _formatDays(double days) {
+    if (days <= 0) return 'N/A';
+    if (days < 1) return '${(days * 24).round()}H';
+    return '${days.toStringAsFixed(1)}D';
+  }
+
+  String _normalizeCategory(String category) {
+    return category.trim().toLowerCase();
   }
 
   List<String> _cleanImageUrls(List<String> urls) {

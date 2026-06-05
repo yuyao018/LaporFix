@@ -21,6 +21,7 @@ class _IssueDetailsPageState extends State<IssueDetailsPage> {
   // single-document stream backing this page
   // keeps detail screen after update_issue writes without reloading the whole summary list
   late final Stream<IssueSummary> _issueStream;
+  late final Stream<List<IssueSummary>> _systemIssuesStream;
 
   @override
   void initState() {
@@ -29,16 +30,29 @@ class _IssueDetailsPageState extends State<IssueDetailsPage> {
     // keeps the first render instant
     // this stream replaces it after a status update.
     _issueStream = _repository.watchIssue(widget.issue.id);
+    _systemIssuesStream = _repository.watchSystemIssues();
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<IssueSummary>(
-      stream: _issueStream,
-      builder: (context, snapshot) {
-        // use tapped issue until the first snapshot arrives
-        final issue = snapshot.data ?? widget.issue;
-        return IssueDetailsView(viewModel: IssueDetailsViewModel(issue: issue));
+    return StreamBuilder<List<IssueSummary>>(
+      stream: _systemIssuesStream,
+      builder: (context, systemSnapshot) {
+        final systemIssues = systemSnapshot.data ?? const <IssueSummary>[];
+
+        return StreamBuilder<IssueSummary>(
+          stream: _issueStream,
+          builder: (context, snapshot) {
+            // use tapped issue until the first snapshot arrives
+            final issue = snapshot.data ?? widget.issue;
+            return IssueDetailsView(
+              viewModel: IssueDetailsViewModel(
+                issue: issue,
+                systemIssues: systemIssues,
+              ),
+            );
+          },
+        );
       },
     );
   }

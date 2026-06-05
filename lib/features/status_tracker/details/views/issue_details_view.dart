@@ -19,8 +19,12 @@ class IssueDetailsView extends StatelessWidget {
     return Scaffold(
       appBar: FunctionAppBar(
         title: 'Report Status',
-        showHistory: true,
-        onHistoryTap: () => _openUpdateIssue(context),
+        showHistory: false,
+        trailingAction: IconButton(
+          tooltip: 'App settings',
+          icon: const Icon(Icons.edit_rounded, color: Colors.black, size: 28),
+          onPressed: () => _openUpdateIssue(context),
+        ),
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.functionBackground),

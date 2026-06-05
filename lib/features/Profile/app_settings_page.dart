@@ -35,7 +35,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
       builder: (context) => AlertDialog(
         title: const Text('Reset app settings?'),
         content: const Text(
-          'Your notification, report, privacy, and display preferences will return to their defaults.',
+          'Your notification, privacy, and display preferences will return to their defaults.',
         ),
         actions: [
           TextButton(
@@ -120,22 +120,6 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                               value: _settings.statusUpdates,
                               onChanged: (value) =>
                                   _updateSetting('statusUpdates', value),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        _SettingsSection(
-                          title: 'Reports',
-                          icon: Icons.assignment_rounded,
-                          children: [
-                            _SwitchSettingTile(
-                              icon: Icons.visibility_off_rounded,
-                              title: 'Anonymous public reports',
-                              subtitle:
-                                  'Hide your name on public report cards while keeping admin access.',
-                              value: _settings.anonymousReportMode,
-                              onChanged: (value) =>
-                                  _updateSetting('anonymousReportMode', value),
                             ),
                           ],
                         ),
@@ -363,6 +347,37 @@ class _SwitchSettingTile extends StatelessWidget {
       activeThumbColor: AppTheme.primaryBlue,
       activeTrackColor: AppTheme.primaryBlue.withValues(alpha: 0.28),
       onChanged: onChanged,
+    );
+  }
+}
+
+class _InfoSettingTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _InfoSettingTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: AppTheme.textSecondary, size: 24),
+      title: Text(
+        title,
+        style: tt.bodyLarge?.copyWith(
+          color: AppTheme.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(subtitle, style: tt.bodySmall?.copyWith(fontSize: 13)),
     );
   }
 }

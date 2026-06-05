@@ -35,6 +35,15 @@ class StatusTrackerRepository {
     });
   }
 
+  // watches every issue in the system for cross-user category benchmarks
+  Stream<List<IssueSummary>> watchSystemIssues() {
+    return _firestore.collection(collectionPath).snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => IssueSummary.fromMap(id: doc.id, data: doc.data()))
+          .toList(growable: false);
+    });
+  }
+
   // Allows the detail page can refresh immediately after an update
   Stream<IssueSummary> watchIssue(String issueId) {
     return _firestore.collection(collectionPath).doc(issueId).snapshots().map((
