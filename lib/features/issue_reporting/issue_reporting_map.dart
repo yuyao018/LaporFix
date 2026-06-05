@@ -233,6 +233,7 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                                       viewModel
                                                           .addressController
                                                           .clear();
+                                                      viewModel.setAddress('');
                                                       viewModel
                                                           .clearSuggestions();
                                                       setState(() {});
@@ -321,6 +322,10 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                                         .text =
                                                     suggestion['display_name'] ??
                                                     '';
+                                                viewModel.setAddress(
+                                                  suggestion['display_name'] ??
+                                                      '',
+                                                );
                                                 viewModel.clearSuggestions();
                                               });
 
@@ -400,11 +405,12 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller:
-                                      viewModel.additionalNotesController,
+                                      viewModel.addressDetailsController,
                                   style: const TextStyle(
                                     fontSize: 14.0,
                                     color: Colors.black87,
                                   ),
+                                  onChanged: viewModel.updateAddressDetails,
                                   decoration: InputDecoration(
                                     hintText: 'e.g., Block A, Unit 12',
                                     hintStyle: const TextStyle(
@@ -448,6 +454,8 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                 ),
                                 const SizedBox(height: 6),
                                 TextField(
+                                  controller:
+                                      viewModel.additionalNotesController,
                                   maxLines: 5,
                                   style: const TextStyle(
                                     fontSize: 14.0,

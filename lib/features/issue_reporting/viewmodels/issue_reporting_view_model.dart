@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:group2_urbanfix/features/status_tracker/summary/data/status_tracker_repository.dart';
+import 'package:group2_urbanfix/services/app_settings_service.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/issue_report_model.dart';
 import '../services/image_service.dart';
@@ -28,12 +30,15 @@ class IssueReportingViewModel extends ChangeNotifier {
   final TextEditingController categoryController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
+  final TextEditingController addressDetailsController =
+      TextEditingController();
   final TextEditingController additionalNotesController =
       TextEditingController();
 
   // State
   bool isLoadingLocation = true;
   bool isSubmittingReport = false;
+  Timer? _draftSaveTimer;
 
   // MAP State (OpenStreetMap uses latlong2 LatLng)
   LatLng currentPosition = const LatLng(5.3630, 100.4667);
@@ -79,6 +84,7 @@ class IssueReportingViewModel extends ChangeNotifier {
       report.latitude = position.latitude;
       report.longitude = position.longitude;
       report.locationName = address;
+      _scheduleDraftSave();
 
       // Update map marker (OpenStreetMap)
       currentPosition = LatLng(position.latitude, position.longitude);
@@ -98,27 +104,37 @@ class IssueReportingViewModel extends ChangeNotifier {
     currentPosition = position;
     report.latitude = position.latitude;
     report.longitude = position.longitude;
+    _scheduleDraftSave();
     notifyListeners();
   }
 
   // Manual address input
   void setAddress(String value) {
     report.locationName = value;
+    _scheduleDraftSave();
   }
 
   // UPDATE FORM DATA
   void updateCategory(String? value) {
     report.category = value ?? '';
+    _scheduleDraftSave();
     notifyListeners();
   }
 
   void updateDescription(String value) {
     report.description = value;
+    _scheduleDraftSave();
     notifyListeners();
+  }
+
+  void updateAddressDetails(String value) {
+    report.addressDetails = value;
+    _scheduleDraftSave();
   }
 
   void updateAdditionalNotes(String value) {
     report.additionalNotes = value;
+    _scheduleDraftSave();
     notifyListeners();
   }
 
@@ -137,6 +153,7 @@ class IssueReportingViewModel extends ChangeNotifier {
   // Submit issue report to Firebase Storage and Firestore
   Future<void> submitReport(BuildContext context) async {
     final NavigatorState navigator = Navigator.of(context);
+    final settings = AppSettingsService.instance;
     String postcode = '';
 
     isSubmittingReport = true;
@@ -164,6 +181,15 @@ class IssueReportingViewModel extends ChangeNotifier {
       debugPrint('Postcode fetch failed: $e');
     }
     try {
+      isSubmittingReport = true;
+      notifyListeners();
+
+      // Show loading indicator while submitting report
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
 
       // STEP A: Upload image to Firebase Storage
       String imageUrl = '';
@@ -194,6 +220,10 @@ class IssueReportingViewModel extends ChangeNotifier {
             ? descriptionController.text
             : report.description,
         'reporterID': currentUserId,
+        'reporterVisibility': settings.anonymousReportMode
+            ? 'anonymous'
+            : 'public',
+        'publicReporterName': settings.anonymousReportMode ? 'Anonymous' : null,
         // Initial report status
         'status': 'submitted',
 
@@ -233,11 +263,13 @@ class IssueReportingViewModel extends ChangeNotifier {
         'proofOfCompletion': null,
 
         // Custom fields
-        'additionalNotes': additionalNotesController.text,
+        'addressDetails': addressDetailsController.text.trim(),
+        'additionalNotes': additionalNotesController.text.trim(),
         'isUnderReview': true,
       });
 
       // Close loading indicator after successful submission
+      if (!context.mounted) return;
       navigator.pop();
 
       // Display success dialog
@@ -323,6 +355,7 @@ class IssueReportingViewModel extends ChangeNotifier {
           );
         },
       ).then((_) {
+        unawaited(clearDraft());
         resetForm();
         // Return to the home page
         navigator.popUntil((route) => route.isFirst);
@@ -351,22 +384,120 @@ class IssueReportingViewModel extends ChangeNotifier {
 
   // Reset
   void resetForm() {
+    _draftSaveTimer?.cancel();
     report = IssueReportModel();
     categoryController.clear();
     descriptionController.clear();
     addressController.clear();
+    addressDetailsController.clear();
     additionalNotesController.clear();
     notifyListeners();
+  }
+
+  Future<void> loadDraftIfEnabled() async {
+    // if (!AppSettingsService.instance.autoSaveReportDrafts) return;
+
+    final ref = _draftRef();
+    if (ref == null) return;
+
+    final snapshot = await ref.get();
+    final data = snapshot.data();
+    if (data == null) return;
+
+    report.category = data['category']?.toString() ?? '';
+    report.description = data['description']?.toString() ?? '';
+    report.locationName = data['locationName']?.toString() ?? '';
+    report.addressDetails = data['addressDetails']?.toString() ?? '';
+    report.additionalNotes = data['additionalNotes']?.toString() ?? '';
+    report.latitude = _readDouble(data['latitude']);
+    report.longitude = _readDouble(data['longitude']);
+
+    if (report.latitude != null && report.longitude != null) {
+      currentPosition = LatLng(report.latitude!, report.longitude!);
+    }
+
+    categoryController.text = report.category;
+    descriptionController.text = report.description;
+    addressController.text = report.locationName;
+    addressDetailsController.text = report.addressDetails;
+    additionalNotesController.text = report.additionalNotes;
+
+    notifyListeners();
+  }
+
+  Future<void> clearDraft() async {
+    _draftSaveTimer?.cancel();
+    final ref = _draftRef();
+    if (ref == null) return;
+    await ref.delete().catchError((_) {});
   }
 
   // Dispose
   @override
   void dispose() {
+    _draftSaveTimer?.cancel();
     categoryController.dispose();
     descriptionController.dispose();
     addressController.dispose();
+    addressDetailsController.dispose();
     additionalNotesController.dispose();
     super.dispose();
+  }
+
+  void _scheduleDraftSave() {
+    // if (!AppSettingsService.instance.autoSaveReportDrafts) return;
+
+    _draftSaveTimer?.cancel();
+    _draftSaveTimer = Timer(const Duration(milliseconds: 800), () {
+      unawaited(_saveDraft());
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    // if (!AppSettingsService.instance.autoSaveReportDrafts) return;
+
+    final ref = _draftRef();
+    if (ref == null || !_hasDraftContent) return;
+
+    await ref.set({
+      'category': report.category.trim(),
+      'description': report.description.trim(),
+      'locationName': addressController.text.trim().isNotEmpty
+          ? addressController.text.trim()
+          : report.locationName.trim(),
+      'addressDetails': addressDetailsController.text.trim(),
+      'additionalNotes': additionalNotesController.text.trim().isNotEmpty
+          ? additionalNotesController.text.trim()
+          : report.additionalNotes.trim(),
+      'latitude': report.latitude,
+      'longitude': report.longitude,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  bool get _hasDraftContent {
+    return report.category.trim().isNotEmpty ||
+        report.description.trim().isNotEmpty ||
+        addressController.text.trim().isNotEmpty ||
+        addressDetailsController.text.trim().isNotEmpty ||
+        additionalNotesController.text.trim().isNotEmpty;
+  }
+
+  DocumentReference<Map<String, dynamic>>? _draftRef() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('reportDrafts')
+        .doc('current');
+  }
+
+  double? _readDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 
   // New State for Search Suggestions

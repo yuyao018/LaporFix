@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../services/app_settings_service.dart';
 import '../../../../../theme/app_theme.dart';
 import '../../models/issue_summary.dart';
 
-// card for one issue summary
+// Card for one issue summary.
 class IssueSummaryCard extends StatelessWidget {
   const IssueSummaryCard({super.key, required this.issue, required this.onTap});
 
@@ -113,7 +114,7 @@ class IssueSummaryCard extends StatelessWidget {
   }
 }
 
-// thumbnail used at the left
+// Thumbnail used at the left.
 class _ReportImagePreview extends StatefulWidget {
   const _ReportImagePreview({
     required this.imageUrl,
@@ -142,7 +143,6 @@ class _ReportImagePreviewState extends State<_ReportImagePreview> {
       return;
     }
 
-    // lets the image escape the card bounds and sit above the whole page
     _previewOverlay = OverlayEntry(
       builder: (context) => _ExpandedReportImagePreview(imageUrl: imageUrl),
     );
@@ -159,61 +159,75 @@ class _ReportImagePreviewState extends State<_ReportImagePreview> {
   Widget build(BuildContext context) {
     final trimmedImageUrl = widget.imageUrl?.trim();
 
-    return MouseRegion(
-      onHover: (_) => _showExpandedPreview(),
-      onExit: (_) => _hideExpandedPreview(),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _showExpandedPreview(),
-        onTapUp: (_) => _hideExpandedPreview(),
-        onTapCancel: _hideExpandedPreview,
-        onTap: _hideExpandedPreview,
-        child: Container(
-          width: 62,
-          height: 74,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF9FAFB),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          foregroundDecoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE4E7EC)),
-          ),
-          child: trimmedImageUrl == null || trimmedImageUrl.isEmpty
-              ? _FallbackDocumentIcon(color: widget.fallbackColor)
-              : Image.network(
-                  trimmedImageUrl,
-                  width: 62,
-                  height: 74,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
+    return AnimatedBuilder(
+      animation: AppSettingsService.instance,
+      builder: (context, _) {
+        final reduceMedia = AppSettingsService.instance.shouldReduceMedia;
 
-                    return Center(
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          value: progress.expectedTotalBytes == null
-                              ? null
-                              : progress.cumulativeBytesLoaded /
-                                    progress.expectedTotalBytes!,
-                        ),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) =>
-                      _FallbackDocumentIcon(color: widget.fallbackColor),
-                ),
-        ),
-      ),
+        return MouseRegion(
+          onHover: (_) {
+            if (!reduceMedia) _showExpandedPreview();
+          },
+          onExit: (_) => _hideExpandedPreview(),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (_) {
+              if (!reduceMedia) _showExpandedPreview();
+            },
+            onTapUp: (_) => _hideExpandedPreview(),
+            onTapCancel: _hideExpandedPreview,
+            onTap: _hideExpandedPreview,
+            child: Container(
+              width: 62,
+              height: 74,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              foregroundDecoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE4E7EC)),
+              ),
+              child:
+                  trimmedImageUrl == null ||
+                      trimmedImageUrl.isEmpty ||
+                      reduceMedia
+                  ? _FallbackDocumentIcon(color: widget.fallbackColor)
+                  : Image.network(
+                      trimmedImageUrl,
+                      width: 62,
+                      height: 74,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+
+                        return Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: progress.expectedTotalBytes == null
+                                  ? null
+                                  : progress.cumulativeBytesLoaded /
+                                        progress.expectedTotalBytes!,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) =>
+                          _FallbackDocumentIcon(color: widget.fallbackColor),
+                    ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-// full page preview while thumbnail is hovered
+// Full page preview while thumbnail is hovered.
 class _ExpandedReportImagePreview extends StatelessWidget {
   const _ExpandedReportImagePreview({required this.imageUrl});
 
@@ -283,7 +297,7 @@ class _ExpandedReportImagePreview extends StatelessWidget {
   }
 }
 
-// fallback when an issue has no report image/ fails to load
+// Fallback when an issue has no report image or fails to load.
 class _FallbackDocumentIcon extends StatelessWidget {
   const _FallbackDocumentIcon({required this.color});
 
@@ -297,7 +311,7 @@ class _FallbackDocumentIcon extends StatelessWidget {
   }
 }
 
-// reusable status pill
+// Reusable status pill.
 class _StatusPill extends StatelessWidget {
   const _StatusPill({
     required this.label,
@@ -337,7 +351,7 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-// icon + text row inside the card
+// Icon and text row inside the card.
 class _MetaRow extends StatelessWidget {
   const _MetaRow({
     required this.icon,
@@ -375,7 +389,7 @@ class _MetaRow extends StatelessWidget {
   }
 }
 
-// row of engagement count
+// Row of engagement counts.
 class _CountBadge extends StatelessWidget {
   const _CountBadge({required this.icon, required this.value});
 

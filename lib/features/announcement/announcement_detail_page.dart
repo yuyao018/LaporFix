@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../services/app_settings_service.dart';
 import '../../widgets/function_appbar.dart';
 import '../../widgets/chatbox.dart';
 import '../../theme/app_theme.dart';
@@ -442,6 +443,8 @@ class _AttachmentsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
 
+    final reduceMedia = AppSettingsService.instance.shouldReduceMedia;
+
     // Separate by type
     final images = attachments
         .where((a) => (a as Map)['type'] == 'image')
@@ -476,18 +479,20 @@ class _AttachmentsSection extends StatelessWidget {
                   onTap: () => _openUrl(url),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      url,
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) => Container(
-                        width: 120,
-                        height: 120,
-                        color: AppTheme.surfaceGrey,
-                        child: const Icon(Icons.broken_image),
-                      ),
-                    ),
+                    child: reduceMedia
+                        ? const _ReducedAttachmentPreview()
+                        : Image.network(
+                            url,
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, stack) => Container(
+                              width: 120,
+                              height: 120,
+                              color: AppTheme.surfaceGrey,
+                              child: const Icon(Icons.broken_image),
+                            ),
+                          ),
                   ),
                 );
               },
@@ -609,5 +614,26 @@ class _AttachmentsSection extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+}
+
+class _ReducedAttachmentPreview extends StatelessWidget {
+  const _ReducedAttachmentPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 120,
+      height: 120,
+      child: ColoredBox(
+        color: AppTheme.surfaceGrey,
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported_rounded,
+            color: AppTheme.textSecondary,
+          ),
+        ),
+      ),
+    );
   }
 }

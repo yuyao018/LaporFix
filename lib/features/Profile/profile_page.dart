@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../widgets/function_appbar.dart';
 import '../../widgets/location_search_sheet.dart';
 import '../../theme/app_theme.dart';
+import 'app_settings_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback? onBack;
@@ -76,10 +77,9 @@ class _ProfilePageState extends State<ProfilePage> {
       final url = await ref.getDownloadURL();
 
       // Update Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'photoURL': url});
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
+        {'photoURL': url},
+      );
 
       // Update Firebase Auth profile
       await user.updatePhotoURL(url);
@@ -92,11 +92,29 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading photo: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error uploading photo: $e')));
       }
     }
+  }
+
+  void _openSettings() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AppSettingsPage()));
+  }
+
+  PreferredSizeWidget _buildProfileAppBar() {
+    return FunctionAppBar(
+      title: 'My Profile',
+      onBack: widget.onBack,
+      trailingAction: IconButton(
+        tooltip: 'App settings',
+        icon: const Icon(Icons.settings_rounded, color: Colors.black, size: 28),
+        onPressed: _openSettings,
+      ),
+    );
   }
 
   Future<void> _changeAddress() async {
@@ -119,10 +137,10 @@ class _ProfilePageState extends State<ProfilePage> {
           .collection('users')
           .doc(user.uid)
           .update({
-        'homeAddress': result['full'] ?? '',
-        'area': result['area'] ?? '',
-        'state': result['state'] ?? '',
-      });
+            'homeAddress': result['full'] ?? '',
+            'area': result['area'] ?? '',
+            'state': result['state'] ?? '',
+          });
 
       if (mounted) {
         setState(() {
@@ -136,9 +154,9 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating address: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating address: $e')));
       }
     }
   }
@@ -180,11 +198,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       labelText: 'Current Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(obscureCurrent
-                            ? Icons.visibility_off
-                            : Icons.visibility),
+                        icon: Icon(
+                          obscureCurrent
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
                         onPressed: () => setDialogState(
-                            () => obscureCurrent = !obscureCurrent),
+                          () => obscureCurrent = !obscureCurrent,
+                        ),
                       ),
                     ),
                   ),
@@ -198,9 +219,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       labelText: 'New Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(obscureNew
-                            ? Icons.visibility_off
-                            : Icons.visibility),
+                        icon: Icon(
+                          obscureNew ? Icons.visibility_off : Icons.visibility,
+                        ),
                         onPressed: () =>
                             setDialogState(() => obscureNew = !obscureNew),
                       ),
@@ -216,11 +237,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       labelText: 'Confirm New Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(obscureConfirm
-                            ? Icons.visibility_off
-                            : Icons.visibility),
+                        icon: Icon(
+                          obscureConfirm
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
                         onPressed: () => setDialogState(
-                            () => obscureConfirm = !obscureConfirm),
+                          () => obscureConfirm = !obscureConfirm,
+                        ),
                       ),
                     ),
                   ),
@@ -256,17 +280,21 @@ class _ProfilePageState extends State<ProfilePage> {
                     // Validation
                     if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
                       setDialogState(
-                          () => errorText = 'Please fill in all fields.');
+                        () => errorText = 'Please fill in all fields.',
+                      );
                       return;
                     }
                     if (newPass.length < 6) {
-                      setDialogState(() => errorText =
-                          'New password must be at least 6 characters.');
+                      setDialogState(
+                        () => errorText =
+                            'New password must be at least 6 characters.',
+                      );
                       return;
                     }
                     if (newPass != confirm) {
                       setDialogState(
-                          () => errorText = 'New passwords do not match.');
+                        () => errorText = 'New passwords do not match.',
+                      );
                       return;
                     }
 
@@ -287,7 +315,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text('Password changed successfully.')),
+                            content: Text('Password changed successfully.'),
+                          ),
                         );
                       }
                     } on FirebaseAuthException catch (e) {
@@ -337,7 +366,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (_isLoading) {
       return Scaffold(
-        appBar: FunctionAppBar(title: 'My Profile', onBack: widget.onBack),
+        appBar: _buildProfileAppBar(),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -350,13 +379,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final photoURL = _userData?['photoURL'] ?? user?.photoURL ?? '';
 
     return Scaffold(
-      appBar: FunctionAppBar(title: 'My Profile', onBack: widget.onBack),
+      appBar: _buildProfileAppBar(),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.functionBackground,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.functionBackground),
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -384,8 +411,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ? NetworkImage(photoURL)
                                   : null,
                               child: photoURL.isEmpty
-                                  ? const Icon(Icons.person,
-                                      size: 45, color: AppTheme.primaryBlue)
+                                  ? const Icon(
+                                      Icons.person,
+                                      size: 45,
+                                      color: AppTheme.primaryBlue,
+                                    )
                                   : null,
                             ),
                           ),
@@ -413,8 +443,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     // Username
                     Text(
                       username,
-                      style: tt.titleLarge
-                          ?.copyWith(color: AppTheme.textOnGradient),
+                      style: tt.titleLarge?.copyWith(
+                        color: AppTheme.textOnGradient,
+                      ),
                     ),
                     const SizedBox(height: 4),
 
@@ -455,15 +486,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Text(
                       'Personal Details',
-                      style: tt.titleLarge
-                          ?.copyWith(color: AppTheme.primaryBlue),
+                      style: tt.titleLarge?.copyWith(
+                        color: AppTheme.primaryBlue,
+                      ),
                     ),
                     const SizedBox(height: 12),
 
                     _DetailRow(
-                      label: 'UrbanFix ID',
-                      value:
-                          '#${uid.length > 9 ? uid.substring(0, 9) : uid}',
+                      label: 'LaporFix ID',
+                      value: '#${uid.length > 9 ? uid.substring(0, 9) : uid}',
                     ),
                     const Divider(height: 1),
                     _DetailRow(label: 'Email', value: email),
@@ -491,8 +522,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: OutlinedButton(
                         onPressed: _logout,
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                              color: Colors.red, width: 1.5),
+                          side: const BorderSide(color: Colors.red, width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -537,10 +567,7 @@ class _StatBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            count,
-            style: tt.titleLarge?.copyWith(fontSize: 22),
-          ),
+          Text(count, style: tt.titleLarge?.copyWith(fontSize: 22)),
           const SizedBox(height: 2),
           Text(
             label,
@@ -584,10 +611,7 @@ class _DetailRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  value,
-                  style: tt.bodyLarge?.copyWith(fontSize: 16),
-                ),
+                child: Text(value, style: tt.bodyLarge?.copyWith(fontSize: 16)),
               ),
               if (actionText != null)
                 GestureDetector(

@@ -49,41 +49,43 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
       final image = await picker.pickImage(source: ImageSource.gallery);
       if (image != null && mounted) {
         setState(() {
-          _attachments.add(_Attachment(
-            file: File(image.path),
-            name: image.name,
-            type: AttachmentType.image,
-          ));
+          _attachments.add(
+            _Attachment(
+              file: File(image.path),
+              name: image.name,
+              type: AttachmentType.image,
+            ),
+          );
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Image pick error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Image pick error: $e')));
       }
     }
   }
 
   Future<void> _pickDocument() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-      );
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
       if (result != null && result.files.single.path != null && mounted) {
         setState(() {
-          _attachments.add(_Attachment(
-            file: File(result.files.single.path!),
-            name: result.files.single.name,
-            type: AttachmentType.document,
-          ));
+          _attachments.add(
+            _Attachment(
+              file: File(result.files.single.path!),
+              name: result.files.single.name,
+              type: AttachmentType.document,
+            ),
+          );
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Document pick error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Document pick error: $e')));
       }
     }
   }
@@ -94,18 +96,20 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
       final video = await picker.pickVideo(source: ImageSource.gallery);
       if (video != null && mounted) {
         setState(() {
-          _attachments.add(_Attachment(
-            file: File(video.path),
-            name: video.name,
-            type: AttachmentType.video,
-          ));
+          _attachments.add(
+            _Attachment(
+              file: File(video.path),
+              name: video.name,
+              type: AttachmentType.video,
+            ),
+          );
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Video pick error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Video pick error: $e')));
       }
     }
   }
@@ -162,16 +166,16 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
     final caption = _captionController.text.trim();
 
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a title.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a title.')));
       return;
     }
 
     if (caption.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a caption.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a caption.')));
       return;
     }
 
@@ -227,9 +231,9 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -321,8 +325,8 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                           a.type == AttachmentType.image
                               ? Icons.image
                               : a.type == AttachmentType.video
-                                  ? Icons.videocam
-                                  : Icons.description,
+                              ? Icons.videocam
+                              : Icons.description,
                           color: AppTheme.primaryBlue,
                           size: 20,
                         ),
@@ -336,7 +340,11 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                         ),
                         GestureDetector(
                           onTap: () => _removeAttachment(i),
-                          child: const Icon(Icons.close, size: 18, color: Colors.red),
+                          child: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.red,
+                          ),
                         ),
                       ],
                     ),
@@ -398,7 +406,10 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
               // ── Location picker ──
               Row(
                 children: [
-                  Text('Location', style: tt.titleLarge?.copyWith(fontSize: 16)),
+                  Text(
+                    'Location',
+                    style: tt.titleLarge?.copyWith(fontSize: 16),
+                  ),
                   const SizedBox(width: 4),
                   const Text('📌', style: TextStyle(fontSize: 16)),
                 ],
@@ -408,7 +419,10 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                 onTap: _showLocationPicker,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: const Color(0xFFD1D5DB)),
                     borderRadius: BorderRadius.circular(12),
@@ -485,10 +499,7 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
               // ── Submit button ──
               _isSubmitting
                   ? const Center(child: CircularProgressIndicator())
-                  : PrimaryButton(
-                      label: 'Submit',
-                      onPressed: _submitPost,
-                    ),
+                  : PrimaryButton(label: 'Submit', onPressed: _submitPost),
               const SizedBox(height: 24),
             ],
           ),
@@ -608,9 +619,10 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
         '&limit=10',
       );
 
-      final response = await http.get(uri, headers: {
-        'User-Agent': 'LaporFix/1.0 (student project)',
-      });
+      final response = await http.get(
+        uri,
+        headers: {'User-Agent': 'LaporFix/1.0 (student project)'},
+      );
 
       if (!mounted) return;
 
@@ -620,15 +632,14 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
           _results = data.map((item) {
             final address = item['address'] as Map<String, dynamic>? ?? {};
             // Build a readable display name from address parts
-            final suburb = address['suburb'] ??
+            final suburb =
+                address['suburb'] ??
                 address['village'] ??
                 address['town'] ??
                 address['city_district'] ??
                 '';
-            final city = address['city'] ??
-                address['town'] ??
-                address['county'] ??
-                '';
+            final city =
+                address['city'] ?? address['town'] ?? address['county'] ?? '';
             final state = address['state'] ?? '';
 
             return {
@@ -696,8 +707,7 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
               const SizedBox(height: 16),
               Text('Select Location', style: tt.titleLarge),
               const SizedBox(height: 4),
-              Text('Search any location in Malaysia',
-                  style: tt.bodySmall),
+              Text('Search any location in Malaysia', style: tt.bodySmall),
               const SizedBox(height: 12),
 
               // Search field
@@ -715,8 +725,10 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
                   decoration: const InputDecoration(
                     hintText: 'Type location and press Enter...',
                     hintStyle: TextStyle(color: AppTheme.textSecondary),
-                    prefixIcon:
-                        Icon(Icons.search, color: AppTheme.textSecondary),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: AppTheme.textSecondary,
+                    ),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 14),
                   ),
@@ -733,15 +745,15 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
               else if (_errorMsg.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(_errorMsg,
-                      style: tt.bodySmall?.copyWith(color: Colors.red)),
+                  child: Text(
+                    _errorMsg,
+                    style: tt.bodySmall?.copyWith(color: Colors.red),
+                  ),
                 )
-              else if (_results.isEmpty &&
-                  _searchController.text.length >= 3)
+              else if (_results.isEmpty && _searchController.text.length >= 3)
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text('No results found.',
-                      style: tt.bodySmall),
+                  child: Text('No results found.', style: tt.bodySmall),
                 )
               else
                 Expanded(
@@ -752,12 +764,15 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
                       final result = _results[index];
                       final formatted = _formatLocation(result);
                       return ListTile(
-                        leading: const Icon(Icons.location_on_outlined,
-                            color: AppTheme.primaryBlue),
+                        leading: const Icon(
+                          Icons.location_on_outlined,
+                          color: AppTheme.primaryBlue,
+                        ),
                         title: Text(
                           formatted,
-                          style: tt.bodySmall
-                              ?.copyWith(color: AppTheme.textPrimary),
+                          style: tt.bodySmall?.copyWith(
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
                         subtitle: Text(
                           result['display'],
@@ -797,9 +812,7 @@ class _SuccessScreen extends StatelessWidget {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.functionBackground,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.functionBackground),
         child: Center(
           child: Container(
             padding: const EdgeInsets.all(40),
@@ -820,9 +833,9 @@ class _SuccessScreen extends StatelessWidget {
                 Text(
                   'Announcement\nposted!',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 22,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontSize: 22),
                 ),
               ],
             ),
