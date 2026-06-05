@@ -20,6 +20,8 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
   final MapController _mapController = MapController();
   // Controls search field focus state
   final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _addressDetailsFocusNode = FocusNode();
+  final FocusNode _additionalNotesFocusNode = FocusNode();
 
   bool _isFormVisible = false;
 
@@ -50,14 +52,19 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
   @override
   void dispose() {
     _searchFocusNode.dispose();
+    _addressDetailsFocusNode.dispose();
+    _additionalNotesFocusNode.dispose();
     _mapController.dispose(); // Release resources to prevent memory leaks
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final isKeyboardVisible = keyboardInset > 0;
+
     return Scaffold(
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       appBar: FunctionAppBar(
         title: 'Create Report',
         onBack: () {
@@ -73,8 +80,10 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.functionBackground),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: AnimatedPadding(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + keyboardInset),
             child: Container(
               width: double.infinity,
               height: double.infinity,
@@ -86,7 +95,7 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                 children: [
                   // --- MAP AREA SECTION ---
                   Expanded(
-                    flex: _isFormVisible ? 12 : 100,
+                    flex: _isFormVisible ? (isKeyboardVisible ? 6 : 12) : 100,
                     child: Container(
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
@@ -384,113 +393,163 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                   // Details form section
                   if (_isFormVisible)
                     Expanded(
-                      flex: 11,
+                      flex: isKeyboardVisible ? 17 : 11,
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Address Details (Optional)',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller:
-                                      viewModel.addressDetailsController,
-                                  style: const TextStyle(
-                                    fontSize: 14.0,
-                                    color: Colors.black87,
-                                  ),
-                                  onChanged: viewModel.updateAddressDetails,
-                                  decoration: InputDecoration(
-                                    hintText: 'e.g., Block A, Unit 12',
-                                    hintStyle: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: Colors.black12,
-                                        width: 1,
+                            Expanded(
+                              child: SingleChildScrollView(
+                                keyboardDismissBehavior:
+                                    ScrollViewKeyboardDismissBehavior.onDrag,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Address Details (Optional)',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
                                       ),
                                     ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: Colors.black26,
-                                        width: 1.2,
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller:
+                                          viewModel.addressDetailsController,
+                                      focusNode: _addressDetailsFocusNode,
+                                      textInputAction: TextInputAction.next,
+                                      style: const TextStyle(
+                                        fontSize: 14.0,
+                                        color: Colors.black87,
+                                      ),
+                                      onTap: () {
+                                        final fieldContext =
+                                            _addressDetailsFocusNode.context;
+                                        if (fieldContext != null) {
+                                          Scrollable.ensureVisible(
+                                            fieldContext,
+                                            duration: const Duration(
+                                              milliseconds: 250,
+                                            ),
+                                            curve: Curves.easeOut,
+                                            alignment: 0.2,
+                                          );
+                                        }
+                                      },
+                                      onSubmitted: (_) {
+                                        _additionalNotesFocusNode
+                                            .requestFocus();
+                                      },
+                                      onChanged: viewModel.updateAddressDetails,
+                                      decoration: InputDecoration(
+                                        hintText: 'e.g., Block A, Unit 12',
+                                        hintStyle: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 12,
+                                            ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.black12,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.black26,
+                                            width: 1.2,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 18),
+                                    const Text(
+                                      'Additional Notes (Optional)',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller:
+                                          viewModel.additionalNotesController,
+                                      focusNode: _additionalNotesFocusNode,
+                                      maxLines: 5,
+                                      textInputAction: TextInputAction.done,
+                                      style: const TextStyle(
+                                        fontSize: 14.0,
+                                        color: Colors.black87,
+                                      ),
+                                      onTap: () {
+                                        final fieldContext =
+                                            _additionalNotesFocusNode.context;
+                                        if (fieldContext != null) {
+                                          Scrollable.ensureVisible(
+                                            fieldContext,
+                                            duration: const Duration(
+                                              milliseconds: 250,
+                                            ),
+                                            curve: Curves.easeOut,
+                                            alignment: 0.1,
+                                          );
+                                        }
+                                      },
+                                      // Update additional notes in the ViewModel
+                                      onChanged: (value) => viewModel
+                                          .updateAdditionalNotes(value),
+                                      decoration: InputDecoration(
+                                        hintText:
+                                            'Enter more information here...',
+                                        hintStyle: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        contentPadding: const EdgeInsets.all(
+                                          14,
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.black12,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.black26,
+                                            width: 1.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Additional Notes (Optional)',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller:
-                                      viewModel.additionalNotesController,
-                                  maxLines: 5,
-                                  style: const TextStyle(
-                                    fontSize: 14.0,
-                                    color: Colors.black87,
-                                  ),
-                                  // Update additional notes in the ViewModel
-                                  onChanged: (value) =>
-                                      viewModel.updateAdditionalNotes(value),
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter more information here...',
-                                    hintStyle: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: const EdgeInsets.all(14),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: Colors.black12,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: Colors.black26,
-                                        width: 1.2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            const SizedBox(height: 12),
                             SizedBox(
                               width: double.infinity,
                               height: 48,
@@ -502,7 +561,7 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                   ),
                                 ),
                                 onPressed: () async {
-                                  _searchFocusNode.unfocus();
+                                  FocusScope.of(context).unfocus();
                                   await viewModel.submitReport(context);
                                 },
                                 child: Text(
