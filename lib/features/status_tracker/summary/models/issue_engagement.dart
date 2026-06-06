@@ -6,10 +6,8 @@ class IssueEngagement {
   final int likesCount;
 
   factory IssueEngagement.fromMap(Map<String, dynamic>? map) {
-    final comments = _readList(map?['comments']);
-
     return IssueEngagement(
-      commentCount: comments.length,
+      commentCount: _readList(map?['comments']).length,
       likesCount: _readList(map?['likes']).length,
     );
   }

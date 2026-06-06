@@ -265,7 +265,7 @@ class IssueReportingViewModel extends ChangeNotifier {
           null,
         ], // Avoid Firebase array server timestamp conflicts
         // Initial engagement statistics
-        'comment': {'likesCount': 0, 'commentCount': 0},
+        'community': {'likes': [], 'comments': []},
 
         // Completion proof (not available during submission)
         'proofOfCompletion': null,

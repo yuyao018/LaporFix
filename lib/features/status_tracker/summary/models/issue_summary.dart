@@ -73,7 +73,7 @@ class IssueSummary {
       reporterId: _readString(data['reporterID']),
       status: status,
       location: IssueLocation.fromMap(_readMap(data['location'])),
-      engagement: IssueEngagement.fromMap(_readMap(data['comment'])),
+      engagement: IssueEngagement.fromMap(_readMap(data['community'])),
       reportImages: _readStringList(data['reportImg']),
       isDeleted: data['isDeleted'] == true,
       completionProof: IssueCompletionProof.fromMap(proofOfCompletion),
