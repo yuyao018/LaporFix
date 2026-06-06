@@ -4,8 +4,8 @@ import '../../theme/app_theme.dart';
 import '../../widgets/main_appbar.dart';
 import 'services/community_repository.dart';
 import 'viewmodels/community_view_model.dart';
-import 'views/post_details_page.dart';
-import 'views/vote_insight_page.dart';
+import 'post_details_page.dart';
+import 'vote_insight_page.dart';
 import 'widgets/community_issue_card.dart';
 
 class UpvotingPage extends StatefulWidget {
