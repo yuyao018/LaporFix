@@ -4,9 +4,9 @@ import '../../theme/app_theme.dart';
 import '../../widgets/main_appbar.dart';
 import 'services/community_repository.dart';
 import 'viewmodels/community_view_model.dart';
-import 'views/post_details_page.dart';
-import 'views/vote_insight_page.dart';
 import 'widgets/community_issue_card.dart';
+import 'package:group2_urbanfix/features/upvoting/post_details_page.dart';
+import 'package:group2_urbanfix/features/upvoting/vote_insight_page.dart';
 
 class UpvotingPage extends StatefulWidget {
   const UpvotingPage({super.key});
