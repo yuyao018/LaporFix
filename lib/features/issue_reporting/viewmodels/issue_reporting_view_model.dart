@@ -16,6 +16,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:geocoding/geocoding.dart';
 
 class IssueReportingViewModel extends ChangeNotifier {
+  static const String _googleGeocodeApiKey = 'AIzaSyCUrgapzNwjVE0TovS1joxgMIMMlAJPXlY';
+
   // Model
   IssueReportModel report = IssueReportModel();
 
@@ -30,10 +32,8 @@ class IssueReportingViewModel extends ChangeNotifier {
   final TextEditingController categoryController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
-  final TextEditingController addressDetailsController =
-      TextEditingController();
-  final TextEditingController additionalNotesController =
-      TextEditingController();
+  final TextEditingController addressDetailsController = TextEditingController();
+  final TextEditingController additionalNotesController = TextEditingController();
 
   // State
   bool isLoadingLocation = true;
@@ -44,16 +44,7 @@ class IssueReportingViewModel extends ChangeNotifier {
   LatLng currentPosition = const LatLng(5.3630, 100.4667);
 
   // Category List
-  final List<String> categories = [
-    'Lighting',
-    'Drainage',
-    'Electricity',
-    'Garbage',
-    'Water',
-    'Roads',
-    'Waste',
-    'Other',
-  ];
+  final List<String> categories = ['Lighting', 'Drainage', 'Electricity', 'Garbage', 'Water', 'Roads', 'Waste', 'Other'];
 
   // Select an image from the device gallery
   Future<void> pickImage() async {
@@ -75,10 +66,7 @@ class IssueReportingViewModel extends ChangeNotifier {
 
       await Future.delayed(const Duration(milliseconds: 300));
 
-      String address = await _locationService.getAddress(
-        position.latitude,
-        position.longitude,
-      );
+      String address = await _locationService.getAddress(position.latitude, position.longitude);
 
       // Save into model
       report.latitude = position.latitude;
@@ -148,9 +136,7 @@ class IssueReportingViewModel extends ChangeNotifier {
 
   // Validate image, category, and description fields
   bool validateStepOne() {
-    return report.image != null &&
-        resolvedCategory.isNotEmpty &&
-        report.description.isNotEmpty;
+    return report.image != null && resolvedCategory.isNotEmpty && report.description.isNotEmpty;
   }
 
   // Validate location information
@@ -163,6 +149,7 @@ class IssueReportingViewModel extends ChangeNotifier {
     final NavigatorState navigator = Navigator.of(context);
     final settings = AppSettingsService.instance;
     String postcode = '';
+    String postcodeName = '';
 
     isSubmittingReport = true;
     notifyListeners();
@@ -176,35 +163,22 @@ class IssueReportingViewModel extends ChangeNotifier {
 
     try {
       if (report.latitude != null && report.longitude != null) {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          report.latitude!,
-          report.longitude!,
-        );
+        List<Placemark> placemarks = await placemarkFromCoordinates(report.latitude!, report.longitude!);
 
         if (placemarks.isNotEmpty) {
           postcode = placemarks.first.postalCode ?? '';
         }
       }
+
+      postcodeName = await _fetchPostcodeName(postcode);
     } catch (e) {
       debugPrint('Postcode fetch failed: $e');
     }
     try {
-      isSubmittingReport = true;
-      notifyListeners();
-
-      // Show loading indicator while submitting report
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
-
       // STEP A: Upload image to Firebase Storage
       String imageUrl = '';
       if (report.image != null) {
-        final storageRef = FirebaseStorage.instance.ref().child(
-          'issue_images/${DateTime.now().millisecondsSinceEpoch}.jpg',
-        );
+        final storageRef = FirebaseStorage.instance.ref().child('issue_images/${DateTime.now().millisecondsSinceEpoch}.jpg');
 
         UploadTask uploadTask = storageRef.putFile(report.image!);
         TaskSnapshot snapshot = await uploadTask;
@@ -212,8 +186,7 @@ class IssueReportingViewModel extends ChangeNotifier {
       }
 
       // STEP B: Save report data to Firestore 'issue' collection
-      final String currentUserId =
-          FirebaseAuth.instance.currentUser?.uid ?? 'anonymous_user';
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous_user';
       final issueCategory = resolvedCategory;
       if (issueCategory.isEmpty) {
         throw StateError('Enter a category before submitting the report.');
@@ -224,32 +197,21 @@ class IssueReportingViewModel extends ChangeNotifier {
         // Basic report information
         'title': issueCategory,
         'category': issueCategory,
-        'description': report.description.isEmpty
-            ? descriptionController.text
-            : report.description,
+        'description': report.description.isEmpty ? descriptionController.text : report.description,
         'reporterID': currentUserId,
-        'reporterVisibility': settings.anonymousReportMode
-            ? 'anonymous'
-            : 'public',
+        'reporterVisibility': settings.anonymousReportMode ? 'anonymous' : 'public',
         'publicReporterName': settings.anonymousReportMode ? 'Anonymous' : null,
         // Initial report status
         'status': 'submitted',
 
         // Location information
         'location': {
-          'displayName': addressController.text.trim().isNotEmpty
-              ? addressController.text.trim()
-              : 'No address provided',
-          'heading': addressController.text.trim().isNotEmpty
-              ? addressController.text.split(',').first.trim()
-              : 'Selected Location',
+          'displayName': addressController.text.trim().isNotEmpty ? addressController.text.trim() : 'No address provided',
+          'heading': addressController.text.trim().isNotEmpty ? addressController.text.split(',').first.trim() : 'Selected Location',
           'postcode': postcode.isNotEmpty ? postcode : 'Unknown',
-          'latitude':
-              report.latitude ??
-              0.0, // Fallback value if location is unavailable
-          'longitude':
-              report.longitude ??
-              0.0, // Fallback value if location is unavailable
+          'postcodeName': postcodeName.isNotEmpty ? postcodeName : 'Unknown',
+          'latitude': report.latitude ?? 0.0, // Fallback value if location is unavailable
+          'longitude': report.longitude ?? 0.0, // Fallback value if location is unavailable
         },
 
         // Uploaded image URLs
@@ -259,11 +221,7 @@ class IssueReportingViewModel extends ChangeNotifier {
         'isDeleted': false,
         'createdAt': FieldValue.serverTimestamp(),
         'estimatedResolutionAt': null,
-        'statusChangedAt': [
-          DateTime.now(),
-          null,
-          null,
-        ], // Avoid Firebase array server timestamp conflicts
+        'statusChangedAt': [DateTime.now(), null, null], // Avoid Firebase array server timestamp conflicts
         // Initial engagement statistics
         'community': {'likes': [], 'comments': []},
 
@@ -294,67 +252,35 @@ class IssueReportingViewModel extends ChangeNotifier {
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F9FA),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  width: 1.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                border: Border.all(color: Colors.black.withValues(alpha: 0.08), width: 1.0),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_circle,
-                      color: Color(0xFF00C853),
-                      size: 50,
-                    ),
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: const Icon(Icons.check_circle, color: Color(0xFF00C853), size: 50),
                   ),
                   const SizedBox(height: 20),
                   const Text(
                     'Report Successfully',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                      letterSpacing: 0.2,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87, letterSpacing: 0.2),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Submitted',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                      letterSpacing: 0.2,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87, letterSpacing: 0.2),
                   ),
                   InkWell(
                     onTap: () => navigator.pop(),
                     child: Container(
                       margin: const EdgeInsets.only(top: 20),
                       padding: const EdgeInsets.all(4),
-                      child: Text(
-                        'Tap anywhere to close',
-                        style: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 11,
-                        ),
-                      ),
+                      child: Text('Tap anywhere to close', style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
                     ),
                   ),
                 ],
@@ -377,10 +303,7 @@ class IssueReportingViewModel extends ChangeNotifier {
       showDialog(
         context: navigator.context, // ignore: use_build_context_synchronously
         builder: (_) {
-          return AlertDialog(
-            title: const Text('Error'),
-            content: Text('Failed to save database: ${e.toString()}'),
-          );
+          return AlertDialog(title: const Text('Error'), content: Text('Failed to save database: ${e.toString()}'));
         },
       );
       rethrow;
@@ -476,13 +399,9 @@ class IssueReportingViewModel extends ChangeNotifier {
     await ref.set({
       'category': resolvedCategory,
       'description': report.description.trim(),
-      'locationName': addressController.text.trim().isNotEmpty
-          ? addressController.text.trim()
-          : report.locationName.trim(),
+      'locationName': addressController.text.trim().isNotEmpty ? addressController.text.trim() : report.locationName.trim(),
       'addressDetails': addressDetailsController.text.trim(),
-      'additionalNotes': additionalNotesController.text.trim().isNotEmpty
-          ? additionalNotesController.text.trim()
-          : report.additionalNotes.trim(),
+      'additionalNotes': additionalNotesController.text.trim().isNotEmpty ? additionalNotesController.text.trim() : report.additionalNotes.trim(),
       'latitude': report.latitude,
       'longitude': report.longitude,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -497,8 +416,7 @@ class IssueReportingViewModel extends ChangeNotifier {
         additionalNotesController.text.trim().isNotEmpty;
   }
 
-  bool get isOtherCategorySelected =>
-      report.category.trim().toLowerCase() == 'other';
+  bool get isOtherCategorySelected => report.category.trim().toLowerCase() == 'other';
 
   String get resolvedCategory {
     if (isOtherCategorySelected) {
@@ -512,11 +430,81 @@ class IssueReportingViewModel extends ChangeNotifier {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
 
-    return _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('reportDrafts')
-        .doc('current');
+    return _firestore.collection('users').doc(user.uid).collection('reportDrafts').doc('current');
+  }
+
+  Future<String> _fetchPostcodeName(String postcode) async {
+    final normalizedPostcode = postcode.trim();
+    if (normalizedPostcode.isEmpty || normalizedPostcode.toLowerCase() == 'unknown') {
+      return '';
+    }
+
+    try {
+      final url = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+        'components': 'postal_code:$normalizedPostcode|country:MY',
+        'key': _googleGeocodeApiKey,
+      });
+
+      final response = await http.get(url);
+      if (response.statusCode != 200) {
+        debugPrint('Google postcode lookup failed: ${response.statusCode}');
+        return '';
+      }
+
+      final decoded = json.decode(response.body);
+      if (decoded is! Map<String, dynamic>) return '';
+
+      final status = decoded['status']?.toString() ?? '';
+      if (status != 'OK') {
+        debugPrint('Google postcode lookup returned status: $status');
+        return '';
+      }
+
+      final results = decoded['results'];
+      if (results is! List || results.isEmpty) return '';
+
+      final firstResult = results.first;
+      if (firstResult is! Map) return '';
+
+      return _extractPostcodeName(Map<String, dynamic>.from(firstResult), normalizedPostcode);
+    } catch (e) {
+      debugPrint('Google postcode lookup failed: $e');
+      return '';
+    }
+  }
+
+  String _extractPostcodeName(Map<String, dynamic> result, String postcode) {
+    final components = result['address_components'];
+    const preferredTypes = [
+      'locality',
+      'postal_town',
+      'sublocality',
+      'sublocality_level_1',
+      'administrative_area_level_3',
+      'administrative_area_level_2',
+    ];
+
+    if (components is List) {
+      for (final preferredType in preferredTypes) {
+        for (final component in components) {
+          if (component is! Map) continue;
+
+          final longName = component['long_name']?.toString().trim() ?? '';
+          final types = component['types'];
+          if (longName.isEmpty || longName == postcode || types is! List) {
+            continue;
+          }
+
+          final hasPreferredType = types.any((type) => type.toString() == preferredType);
+          if (hasPreferredType) return longName;
+        }
+      }
+    }
+
+    final formattedAddress = result['formatted_address']?.toString().trim();
+    if (formattedAddress == null || formattedAddress.isEmpty) return '';
+
+    return formattedAddress.split(',').first.trim().replaceFirst(RegExp('^${RegExp.escape(postcode)}\\s*'), '').trim();
   }
 
   double? _readDouble(Object? value) {
@@ -543,23 +531,14 @@ class IssueReportingViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=5&addressdetails=1',
-      );
+      final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=5&addressdetails=1');
 
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'com.group2.urbanfix'},
-      );
+      final response = await http.get(url, headers: {'User-Agent': 'com.group2.urbanfix'});
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
         searchSuggestions = data.map((item) {
-          return {
-            'display_name': item['display_name'],
-            'lat': double.parse(item['lat']),
-            'lon': double.parse(item['lon']),
-          };
+          return {'display_name': item['display_name'], 'lat': double.parse(item['lat']), 'lon': double.parse(item['lon'])};
         }).toList();
       }
     } catch (e) {
