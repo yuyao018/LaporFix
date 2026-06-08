@@ -16,6 +16,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:geocoding/geocoding.dart';
 
 class IssueReportingViewModel extends ChangeNotifier {
+  static final Uri _postcodeLookupEndpoint = Uri.parse(
+    'https://asia-southeast1-laporfix.cloudfunctions.net/lookupPostcodeName',
+  );
+
   // Model
   IssueReportModel report = IssueReportModel();
 
@@ -164,6 +168,7 @@ class IssueReportingViewModel extends ChangeNotifier {
     final NavigatorState navigator = Navigator.of(context);
     final settings = AppSettingsService.instance;
     String postcode = '';
+    String postcodeName = '';
 
     isSubmittingReport = true;
     notifyListeners();
@@ -190,6 +195,8 @@ class IssueReportingViewModel extends ChangeNotifier {
           debugPrint('Postcode fetch failed: $e');
         }
       }
+
+      postcodeName = await _fetchPostcodeName(postcode);
 
       isSubmittingReport = true;
       notifyListeners();
@@ -247,6 +254,7 @@ class IssueReportingViewModel extends ChangeNotifier {
               ? addressController.text.split(',').first.trim()
               : 'Selected Location',
           'postcode': postcode.isNotEmpty ? postcode : 'Unknown',
+          'postcodeName': postcodeName.isNotEmpty ? postcodeName : 'Unknown',
           'latitude':
               report.latitude ??
               0.0, // Fallback value if location is unavailable
@@ -527,6 +535,35 @@ class IssueReportingViewModel extends ChangeNotifier {
         .doc('current');
   }
 
+  Future<String> _fetchPostcodeName(String postcode) async {
+    final normalizedPostcode = postcode.trim();
+    if (normalizedPostcode.isEmpty ||
+        normalizedPostcode.toLowerCase() == 'unknown') {
+      return '';
+    }
+
+    try {
+      final url = _postcodeLookupEndpoint.replace(
+        queryParameters: {'postcode': normalizedPostcode},
+      );
+
+      final response = await http.get(url).timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) {
+        debugPrint('Postcode name lookup failed: ${response.statusCode}');
+        return '';
+      }
+
+      final decoded = json.decode(response.body);
+      if (decoded is! Map<String, dynamic>) return '';
+
+      final postcodeName = decoded['postcodeName']?.toString().trim() ?? '';
+      return postcodeName == 'Unknown' ? '' : postcodeName;
+    } catch (e) {
+      debugPrint('Postcode name lookup failed: $e');
+      return '';
+    }
+  }
+
   double? _readDouble(Object? value) {
     if (value is num) return value.toDouble();
     if (value is String) return double.tryParse(value);
@@ -561,10 +598,9 @@ class IssueReportingViewModel extends ChangeNotifier {
         'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=5&addressdetails=1',
       );
 
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'com.group2.urbanfix'},
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(url, headers: {'User-Agent': 'com.group2.urbanfix'})
+          .timeout(const Duration(seconds: 10));
 
       // Discard if a newer request has already been fired
       if (requestId != _searchRequestId) return;
