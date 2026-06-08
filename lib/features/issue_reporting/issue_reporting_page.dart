@@ -467,10 +467,14 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                       ),
                                     );
 
-                                    await viewModel.getCurrentLocation();
+                                    try {
+                                      await viewModel.getCurrentLocation();
+                                    } catch (e) {
+                                      debugPrint('Location error: $e');
+                                    }
 
                                     if (!mounted) return;
-                                    navigator.pop();
+                                    navigator.pop(); // Always close loading dialog
                                     navigator.push(
                                       MaterialPageRoute(
                                         builder: (_) => IssueReportingMap(

@@ -56,24 +56,12 @@ class _AnnouncementPageState extends State<AnnouncementPage> {
   bool get _isAdmin => _userRole == 'admin';
 
   /// Filter announcements by user's home location and search query.
-  /// By default, only shows announcements matching the user's area/state.
-  /// When searching, matches against title, caption, AND location fields.
-  /// Past announcements (created before today) are always excluded.
+  /// Returns all non-deleted announcements matching location/search.
   List<QueryDocumentSnapshot> _filterDocs(List<QueryDocumentSnapshot> docs) {
-    final today = DateTime.now();
-    final startOfToday = DateTime(today.year, today.month, today.day);
-
     return docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final isDeleted = data['isDeleted'] ?? false;
       if (isDeleted == true) return false;
-
-      // Only show announcements from today onwards
-      final createdAt = data['createdAt'];
-      if (createdAt is Timestamp) {
-        final created = createdAt.toDate();
-        if (created.isBefore(startOfToday)) return false;
-      }
 
       // Extract announcement location
       final target = data['target'] as Map<String, dynamic>? ?? {};
@@ -98,17 +86,43 @@ class _AnnouncementPageState extends State<AnnouncementPage> {
       }
 
       // Default: filter by user's home location
-      // Only show announcements that match the user's specific area/suburb
-      if (_userArea.isEmpty && _userState.isEmpty) return true; // no location set, show all
+      if (_userArea.isEmpty && _userState.isEmpty) return true;
 
       final userArea = _userArea.toLowerCase();
 
-      // Strict match: announcement area must match user's area
       if (userArea.isNotEmpty) {
         if (announcementArea == userArea) return true;
         if (announcementFull.contains(userArea)) return true;
       }
 
+      return false;
+    }).toList();
+  }
+
+  /// Announcements from today onwards.
+  List<QueryDocumentSnapshot> _upcoming(List<QueryDocumentSnapshot> docs) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return docs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final createdAt = data['createdAt'];
+      if (createdAt is Timestamp) {
+        return !createdAt.toDate().isBefore(today);
+      }
+      return true;
+    }).toList();
+  }
+
+  /// Announcements before today.
+  List<QueryDocumentSnapshot> _past(List<QueryDocumentSnapshot> docs) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return docs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final createdAt = data['createdAt'];
+      if (createdAt is Timestamp) {
+        return createdAt.toDate().isBefore(today);
+      }
       return false;
     }).toList();
   }
@@ -183,6 +197,8 @@ class _AnnouncementPageState extends State<AnnouncementPage> {
 
           final docs = snapshot.data?.docs ?? [];
           final filtered = _filterDocs(docs);
+          final upcoming = _upcoming(filtered);
+          final past = _past(filtered);
           final displayLocation = _getDisplayLocation(filtered);
 
           return Column(
@@ -210,23 +226,41 @@ class _AnnouncementPageState extends State<AnnouncementPage> {
 
               // ── Announcement list ──
               Expanded(
-                child: filtered.isEmpty
-                    ? const Center(child: Text('No upcoming announcements.'))
-                    : ListView.builder(
+                child: (upcoming.isEmpty && past.isEmpty)
+                    ? const Center(child: Text('No announcements found.'))
+                    : ListView(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final doc = filtered[index];
-                          final data = doc.data() as Map<String, dynamic>;
-
-                          return _AnnouncementCard(
-                            docId: doc.id,
-                            title: data['title'] ?? '',
-                            caption: data['caption'] ?? '',
-                            color: data['colour'] ?? 'green',
-                            hasAttachments: (data['attachments'] as List?)?.isNotEmpty ?? false,
-                          );
-                        },
+                        children: [
+                          if (upcoming.isNotEmpty) ...[
+                            _SectionHeader(title: 'Upcoming'),
+                            ...upcoming.map((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return _AnnouncementCard(
+                                docId: doc.id,
+                                title: data['title'] ?? '',
+                                caption: data['caption'] ?? '',
+                                color: data['colour'] ?? 'green',
+                                hasAttachments:
+                                    (data['attachments'] as List?)?.isNotEmpty ?? false,
+                              );
+                            }),
+                          ],
+                          if (past.isNotEmpty) ...[
+                            _SectionHeader(title: 'Past Announcements'),
+                            ...past.map((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return _AnnouncementCard(
+                                docId: doc.id,
+                                title: data['title'] ?? '',
+                                caption: data['caption'] ?? '',
+                                color: data['colour'] ?? 'green',
+                                hasAttachments:
+                                    (data['attachments'] as List?)?.isNotEmpty ?? false,
+                                isPast: true,
+                              );
+                            }),
+                          ],
+                        ],
                       ),
               ),
             ],
@@ -265,6 +299,29 @@ class _AnnouncementPageState extends State<AnnouncementPage> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Section Header Widget
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textSecondary,
+            ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Announcement Card Widget
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -274,6 +331,7 @@ class _AnnouncementCard extends StatelessWidget {
   final String caption;
   final String color;
   final bool hasAttachments;
+  final bool isPast;
 
   const _AnnouncementCard({
     required this.docId,
@@ -281,6 +339,7 @@ class _AnnouncementCard extends StatelessWidget {
     required this.caption,
     required this.color,
     this.hasAttachments = false,
+    this.isPast = false,
   });
 
   Color get _cardColor => AnnouncementColours.get(color).background;
@@ -291,54 +350,57 @@ class _AnnouncementCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AnnouncementDetailPage(docId: docId),
+    return Opacity(
+      opacity: isPast ? 0.55 : 1.0,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AnnouncementDetailPage(docId: docId),
+            ),
+          );
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _borderColor, width: 1.5),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _borderColor, width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: tt.titleLarge?.copyWith(fontSize: 18),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              caption,
-              style: tt.bodySmall?.copyWith(color: AppTheme.textPrimary),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (hasAttachments) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.attach_file, size: 14, color: _borderColor),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Attachments',
-                    style: tt.bodySmall?.copyWith(
-                      fontSize: 12,
-                      color: _borderColor,
-                    ),
-                  ),
-                ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: tt.titleLarge?.copyWith(fontSize: 18),
               ),
+              const SizedBox(height: 6),
+              Text(
+                caption,
+                style: tt.bodySmall?.copyWith(color: AppTheme.textPrimary),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (hasAttachments) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.attach_file, size: 14, color: _borderColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Attachments',
+                      style: tt.bodySmall?.copyWith(
+                        fontSize: 12,
+                        color: _borderColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

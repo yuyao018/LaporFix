@@ -21,6 +21,8 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
+  int _postsCount = 0;
+  int _likesGivenCount = 0;
 
   @override
   void initState() {
@@ -44,6 +46,50 @@ class _ProfilePageState extends State<ProfilePage> {
       });
     } else {
       if (mounted) setState(() => _isLoading = false);
+    }
+
+    // Load stats after user data
+    _loadStats(user.uid);
+  }
+
+  Future<void> _loadStats(String uid) async {
+    final firestore = FirebaseFirestore.instance;
+
+    // Posts count — issues submitted by this user
+    final postsSnap = await firestore
+        .collection('issue')
+        .where('reporterID', isEqualTo: uid)
+        .where('isDeleted', isEqualTo: false)
+        .count()
+        .get();
+
+    // Likes given — issues where this user's uid appears in community.likes[].likedBy
+    // Firestore can't query inside array-of-maps directly, so we fetch all non-deleted
+    // issues and count client-side. We only need the community.likes field.
+    final issuesSnap = await firestore
+        .collection('issue')
+        .where('isDeleted', isEqualTo: false)
+        .get();
+
+    int likesGiven = 0;
+    for (final doc in issuesSnap.docs) {
+      final data = doc.data();
+      final likes = data['community']?['likes'];
+      if (likes is List) {
+        for (final like in likes) {
+          if (like is Map && like['likedBy'] == uid) {
+            likesGiven++;
+            break; // only count once per post
+          }
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _postsCount = postsSnap.count ?? 0;
+        _likesGivenCount = likesGiven;
+      });
     }
   }
 
@@ -311,9 +357,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                       if (dialogContext.mounted) {
                         Navigator.pop(dialogContext);
-                      }
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(
                           const SnackBar(
                             content: Text('Password changed successfully.'),
                           ),
@@ -461,10 +505,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     // Stats row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        _StatBox(count: '0', label: 'Posts'),
-                        SizedBox(width: 16),
-                        _StatBox(count: '0', label: 'Likes given'),
+                      children: [
+                        _StatBox(count: '$_postsCount', label: 'Posts'),
+                        const SizedBox(width: 16),
+                        _StatBox(count: '$_likesGivenCount', label: 'Likes given'),
                       ],
                     ),
                     const SizedBox(height: 20),

@@ -351,33 +351,4 @@ class _SwitchSettingTile extends StatelessWidget {
   }
 }
 
-class _InfoSettingTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
 
-  const _InfoSettingTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: AppTheme.textSecondary, size: 24),
-      title: Text(
-        title,
-        style: tt.bodyLarge?.copyWith(
-          color: AppTheme.textPrimary,
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(subtitle, style: tt.bodySmall?.copyWith(fontSize: 13)),
-    );
-  }
-}
