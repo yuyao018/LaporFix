@@ -1,17 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/community_comment.dart';
+import '../models/community_user_profile.dart';
 import '../services/community_repository.dart';
 
 enum CommentSort { newest, mostSupported }
 
 extension CommentSortLabel on CommentSort {
-  String get label => switch (this) {
-    CommentSort.newest => 'Newest',
-    CommentSort.mostSupported => 'Most Supported',
-  };
-
   static CommentSort fromLabel(String label) {
     final normalized = label.trim().toLowerCase();
     if (normalized == 'most supported' || normalized == 'most_supported') {
@@ -29,6 +24,9 @@ class PostDetailsViewModel extends ChangeNotifier {
 
   CommentSort _commentSort = CommentSort.newest;
 
+  // simple in-memory cache for user lookups (avatars/area/usernames)
+  final Map<String, Future<CommunityUserProfile?>> _profileFutures = {};
+
   CommentSort get commentSort => _commentSort;
 
   void updateCommentSort(String label) {
@@ -38,10 +36,17 @@ class PostDetailsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<CommunityComment> sortComments(List<CommunityComment> comments) {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  Future<CommunityUserProfile?> profileFor(String uid) {
+    final key = uid.trim();
+    if (key.isEmpty) return Future.value(null);
+    return _profileFutures.putIfAbsent(
+      key,
+      () => _repository.fetchUserProfile(key),
+    );
+  }
 
-    // Always pin admin comments at top.
+  List<CommunityComment> sortComments(List<CommunityComment> comments) {
+    // Always pin admin comments at top (based on stored comment.userRole).
     final admin = comments.where((c) => c.isAdmin).toList(growable: true);
     final others = comments.where((c) => !c.isAdmin).toList(growable: true);
 
@@ -68,11 +73,6 @@ class PostDetailsViewModel extends ChangeNotifier {
         break;
     }
 
-    // (Optional) Keep the current user’s own comment slightly earlier within “others”
-    // if tie. Not required, but harmless.
-    // ignore: unused_local_variable
-    final _ = uid;
-
     return [...admin, ...others];
   }
 
@@ -96,13 +96,10 @@ class PostDetailsViewModel extends ChangeNotifier {
 
   Future<Object?> toggleCommentLike({
     required String issueId,
-    required String commentId,
+    required CommunityComment comment,
   }) async {
     try {
-      await _repository.toggleCommentLike(
-        issueId: issueId,
-        commentId: commentId,
-      );
+      await _repository.toggleCommentLike(issueId: issueId, comment: comment);
       return null;
     } catch (e) {
       return e;

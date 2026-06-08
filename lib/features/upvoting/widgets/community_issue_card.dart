@@ -10,6 +10,9 @@ class CommunityIssueCard extends StatelessWidget {
     required this.issue,
     required this.topRank,
     required this.isLiked,
+    required this.reporterName,
+    required this.reporterArea,
+    required this.reporterPhotoUrl,
     required this.onTap,
     required this.onLikeTap,
   });
@@ -17,6 +20,16 @@ class CommunityIssueCard extends StatelessWidget {
   final CommunityIssue issue;
   final int? topRank; // 1..3 or null
   final bool isLiked;
+
+  /// From users.username (fallback to issue.reporterDisplayText / "Resident")
+  final String reporterName;
+
+  /// From users.area (fallback to empty -> "Location unavailable")
+  final String reporterArea;
+
+  /// From users.photoURL (nullable)
+  final String? reporterPhotoUrl;
+
   final VoidCallback onTap;
   final VoidCallback onLikeTap;
 
@@ -30,6 +43,9 @@ class CommunityIssueCard extends StatelessWidget {
     final imageUrl = issue.reportImages.isEmpty
         ? null
         : issue.reportImages.first;
+    final photo = (reporterPhotoUrl ?? '').trim();
+    final hasPhoto = photo.isNotEmpty;
+    final area = reporterArea.trim();
 
     return GestureDetector(
       onTap: onTap,
@@ -130,19 +146,40 @@ class CommunityIssueCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
+
                   Row(
                     children: [
-                      const Icon(
-                        Icons.person_outline,
-                        size: 16,
-                        color: AppTheme.textSecondary,
+                      // avatar + name
+                      CircleAvatar(
+                        radius: 10,
+                        backgroundColor: AppTheme.surfaceGrey,
+                        backgroundImage: hasPhoto ? NetworkImage(photo) : null,
+                        child: hasPhoto
+                            ? null
+                            : const Icon(
+                                Icons.person_rounded,
+                                size: 14,
+                                color: AppTheme.textSecondary,
+                              ),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        'Resident',
-                        style: tt.bodySmall?.copyWith(fontSize: 12),
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          reporterName.trim().isNotEmpty
+                              ? reporterName.trim()
+                              : 'Resident',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: tt.bodySmall?.copyWith(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
+
+                      // location icon + AREA only
                       const Icon(
                         Icons.location_on_outlined,
                         size: 16,
@@ -150,15 +187,23 @@ class CommunityIssueCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Expanded(
+                        flex: 5,
                         child: Text(
-                          issue.location.displayName,
+                          area.isNotEmpty ? area : 'Location unavailable',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: tt.bodySmall?.copyWith(fontSize: 12),
+                          style: tt.bodySmall?.copyWith(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ),
+
                       const SizedBox(width: 10),
-                      InkWell(
+
+                      // like button
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: onLikeTap,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

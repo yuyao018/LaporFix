@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../models/community_comment.dart';
 import '../models/community_issue.dart';
+import '../models/community_user_profile.dart';
 
 class CommunityRepository {
   CommunityRepository({
@@ -26,9 +28,7 @@ class CommunityRepository {
       doc,
     ) {
       final data = doc.data();
-      if (data == null) {
-        throw StateError('Issue $issueId no longer exists.');
-      }
+      if (data == null) throw StateError('Issue $issueId no longer exists.');
       return CommunityIssue.fromDoc(doc);
     });
   }
@@ -36,16 +36,57 @@ class CommunityRepository {
   Stream<bool> watchCurrentUserIsAdmin() {
     return _auth.authStateChanges().asyncExpand((user) {
       if (user == null) return Stream.value(false);
-      return _firestore.collection('users').doc(user.uid).snapshots().map((
-        doc,
-      ) {
-        final role = (doc.data()?['role'] ?? 'user')
-            .toString()
-            .trim()
-            .toLowerCase();
-        return role == 'admin';
+
+      final docRef = _firestore.collection('users').doc(user.uid);
+
+      // Decide the best stream once:
+      return docRef.get().asStream().asyncExpand((doc) {
+        if (doc.exists) {
+          return docRef.snapshots().map((snap) {
+            final role = (snap.data()?['role'] ?? 'user')
+                .toString()
+                .trim()
+                .toLowerCase();
+            return role == 'admin';
+          });
+        }
+
+        // Fallback: users collection where uid field matches
+        return _firestore
+            .collection('users')
+            .where('uid', isEqualTo: user.uid)
+            .limit(1)
+            .snapshots()
+            .map((snap) {
+              if (snap.docs.isEmpty) return false;
+              final role = (snap.docs.first.data()['role'] ?? 'user')
+                  .toString()
+                  .trim()
+                  .toLowerCase();
+              return role == 'admin';
+            });
       });
     });
+  }
+
+  /// Robust user lookup:
+  /// 1) try doc(uid)
+  /// 2) fallback query where('uid' == uid)
+  Future<CommunityUserProfile?> fetchUserProfile(String uid) async {
+    if (uid.trim().isEmpty) return null;
+
+    final docTry = await _firestore.collection('users').doc(uid).get();
+    if (docTry.exists) {
+      return CommunityUserProfile.fromDoc(docTry);
+    }
+
+    final query = await _firestore
+        .collection('users')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+    if (query.docs.isEmpty) return null;
+    return CommunityUserProfile.fromDoc(query.docs.first);
   }
 
   Future<void> toggleIssueLike(String issueId) async {
@@ -63,12 +104,12 @@ class CommunityRepository {
           : <String, dynamic>{};
 
       final likes = _readListOfMaps(community['likes']);
-      final existingIndex = likes.indexWhere(
+      final i = likes.indexWhere(
         (m) => (m['likedBy'] ?? '').toString() == user.uid,
       );
 
-      if (existingIndex >= 0) {
-        likes.removeAt(existingIndex);
+      if (i >= 0) {
+        likes.removeAt(i);
       } else {
         likes.add({'likedBy': user.uid, 'timestamp': Timestamp.now()});
       }
@@ -89,30 +130,18 @@ class CommunityRepository {
     final trimmed = text.trim();
     if (trimmed.isEmpty) throw StateError('Comment cannot be empty.');
 
+    // Fetch profile OUTSIDE transaction (works even if users doc id != uid).
+    final profile = await fetchUserProfile(user.uid);
+    final username =
+        profile?.displayName ?? (user.displayName ?? user.email ?? 'User');
+    final role = profile?.role.trim().toLowerCase() ?? 'user';
+    final area = profile?.area ?? '';
+
     final issueRef = _firestore.collection(collectionPath).doc(issueId);
-    final userRef = _firestore.collection('users').doc(user.uid);
 
     await _firestore.runTransaction((txn) async {
       final issueSnap = await txn.get(issueRef);
       final issueData = issueSnap.data() ?? <String, dynamic>{};
-
-      final userSnap = await txn.get(userRef);
-      final userData = userSnap.data() ?? <String, dynamic>{};
-
-      final role = (userData['role'] ?? 'user').toString().trim().toLowerCase();
-      final username =
-          (userData['username'] ?? user.displayName ?? user.email ?? 'User')
-              .toString()
-              .trim();
-      final homeAddress = (userData['homeAddress'] ?? '').toString().trim();
-      final area = (userData['area'] ?? '').toString().trim();
-      final state = (userData['state'] ?? '').toString().trim();
-
-      final userLocation = _shortLocation(
-        homeAddress,
-        area: area,
-        state: state,
-      );
 
       final community = (issueData['community'] is Map)
           ? Map<String, dynamic>.from(issueData['community'] as Map)
@@ -120,16 +149,15 @@ class CommunityRepository {
 
       final comments = _readListOfMaps(community['comments']);
 
-      final commentId = '${user.uid}_${DateTime.now().microsecondsSinceEpoch}';
-
       comments.add({
-        'commentId': commentId,
         'comment': trimmed,
         'timestamp': Timestamp.now(),
         'userId': user.uid,
-        'userName': username.isEmpty ? 'User' : username,
+        'userName': username.toString().trim().isEmpty
+            ? 'User'
+            : username.toString().trim(),
         'userRole': role,
-        'userLocation': userLocation,
+        'userLocation': area, // requirement: use users.area
         'likes': <Map<String, dynamic>>[],
       });
 
@@ -144,7 +172,7 @@ class CommunityRepository {
 
   Future<void> toggleCommentLike({
     required String issueId,
-    required String commentId,
+    required CommunityComment comment,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw StateError('Please sign in to like comments.');
@@ -160,30 +188,23 @@ class CommunityRepository {
           : <String, dynamic>{};
 
       final comments = _readListOfMaps(community['comments']);
+      final idx = _findCommentIndex(comments, comment);
+      if (idx < 0) throw StateError('Comment not found.');
 
-      final idx = comments.indexWhere(
-        (m) => (m['commentId'] ?? '').toString() == commentId,
-      );
-      if (idx < 0) {
-        throw StateError('Comment not found.');
-      }
+      final commentMap = Map<String, dynamic>.from(comments[idx]);
+      final likes = _readListOfMaps(commentMap['likes']);
 
-      final comment = Map<String, dynamic>.from(comments[idx]);
-      final likes = _readListOfMaps(comment['likes']);
-
-      final existingIndex = likes.indexWhere(
+      final likeIdx = likes.indexWhere(
         (m) => (m['likedBy'] ?? '').toString() == user.uid,
       );
-
-      if (existingIndex >= 0) {
-        likes.removeAt(existingIndex);
+      if (likeIdx >= 0) {
+        likes.removeAt(likeIdx);
       } else {
         likes.add({'likedBy': user.uid, 'timestamp': Timestamp.now()});
       }
 
-      comment['likes'] = likes;
-      comments[idx] = comment;
-
+      commentMap['likes'] = likes;
+      comments[idx] = commentMap;
       community['comments'] = comments;
 
       txn.set(issueRef, {
@@ -191,6 +212,34 @@ class CommunityRepository {
         'lastUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     });
+  }
+
+  int _findCommentIndex(
+    List<Map<String, dynamic>> comments,
+    CommunityComment target,
+  ) {
+    for (var i = 0; i < comments.length; i++) {
+      final m = comments[i];
+      final ts = m['timestamp'];
+      final dt = ts is Timestamp ? ts.toDate() : null;
+      final millis = dt?.millisecondsSinceEpoch;
+      final userId = (m['userId'] ?? m['commentedBy'] ?? '').toString();
+      final text = (m['comment'] ?? '').toString();
+
+      final key = '${userId.trim()}|${millis?.toString() ?? ''}|${text.trim()}';
+      if (key == target.matchKey) return i;
+    }
+
+    for (var i = 0; i < comments.length; i++) {
+      final m = comments[i];
+      final userId = (m['userId'] ?? m['commentedBy'] ?? '').toString().trim();
+      final text = (m['comment'] ?? '').toString().trim();
+      if (userId == target.userId.trim() && text == target.comment.trim()) {
+        return i;
+      }
+    }
+
+    return -1;
   }
 
   List<Map<String, dynamic>> _readListOfMaps(Object? value) {
@@ -201,21 +250,5 @@ class CommunityRepository {
           .toList(growable: true);
     }
     return <Map<String, dynamic>>[];
-  }
-
-  String _shortLocation(
-    String homeAddress, {
-    required String area,
-    required String state,
-  }) {
-    if (area.isNotEmpty && state.isNotEmpty) return '$area, $state';
-    if (homeAddress.isEmpty) return '';
-    final parts = homeAddress
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-    if (parts.length >= 2) return parts.sublist(parts.length - 2).join(', ');
-    return parts.isNotEmpty ? parts.last : homeAddress;
   }
 }

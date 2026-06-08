@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../theme/app_theme.dart';
-import '../../../widgets/function_appbar.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/function_appbar.dart';
 import 'services/community_repository.dart';
 import 'viewmodels/vote_insight_view_model.dart';
 
@@ -26,6 +26,23 @@ class _VoteInsightPageState extends State<VoteInsightPage> {
   void dispose() {
     _viewModel.dispose();
     super.dispose();
+  }
+
+  Color _rankBg(int rank) {
+    // Match the screenshot vibe: 1=pink, 2=cream, 3=lavender/blue
+    return switch (rank) {
+      1 => const Color(0xFFF8D7DA),
+      2 => const Color(0xFFFFF3CD),
+      _ => const Color(0xFFDDE7FF),
+    };
+  }
+
+  Color _rankFg(int rank) {
+    return switch (rank) {
+      1 => const Color(0xFFB42318),
+      2 => const Color(0xFF7A5C00),
+      _ => const Color(0xFF1D4ED8),
+    };
   }
 
   @override
@@ -83,11 +100,12 @@ class _VoteInsightPageState extends State<VoteInsightPage> {
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
+        final rank = index + 1;
         final item = items[index];
         final issue = item.issue;
 
         final title =
-            'Category: ${issue.category} - ${issue.location.displayName}';
+            'Category: ${issue.category} - ${issue.location.heading.isNotEmpty ? issue.location.heading : issue.location.postcode}';
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -105,14 +123,27 @@ class _VoteInsightPageState extends State<VoteInsightPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: const Color(0xFFDDE7FF),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: _rankBg(rank),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.14),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
                 child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
+                  '$rank',
+                  style: TextStyle(
+                    fontSize: 18, // bigger number
+                    fontWeight: FontWeight.w900,
+                    color: _rankFg(rank),
                   ),
                 ),
               ),

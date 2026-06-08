@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/main_appbar.dart';
-import 'services/community_repository.dart';
-import 'viewmodels/community_view_model.dart';
+import 'models/community_user_profile.dart';
 import 'post_details_page.dart';
+import 'services/community_repository.dart';
 import 'vote_insight_page.dart';
+import 'viewmodels/community_view_model.dart';
 import 'widgets/community_issue_card.dart';
 
 class UpvotingPage extends StatefulWidget {
@@ -107,19 +108,34 @@ class _UpvotingPageState extends State<UpvotingPage> {
           final rank = _viewModel.topRankForIssue(issue.id);
           final isLiked = uid.isNotEmpty && issue.isLikedBy(uid);
 
-          return CommunityIssueCard(
-            issue: issue,
-            topRank: rank,
-            isLiked: isLiked,
-            onTap: () => _openDetails(issue.id),
-            onLikeTap: () async {
-              final err = await _viewModel.toggleLike(issue.id);
-              if (!mounted) return;
-              if (err != null) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(err.toString())));
-              }
+          return FutureBuilder<CommunityUserProfile?>(
+            future: _viewModel.profileFor(issue.reporterId),
+            builder: (context, snapshot) {
+              final profile = snapshot.data;
+
+              final reporterName =
+                  profile?.displayName ?? issue.reporterDisplayText;
+              final reporterArea = profile?.area ?? '';
+              final reporterPhoto = profile?.photoURL;
+
+              return CommunityIssueCard(
+                issue: issue,
+                topRank: rank,
+                isLiked: isLiked,
+                reporterName: reporterName,
+                reporterArea: reporterArea,
+                reporterPhotoUrl: reporterPhoto,
+                onTap: () => _openDetails(issue.id),
+                onLikeTap: () async {
+                  final err = await _viewModel.toggleLike(issue.id);
+                  if (!mounted) return;
+                  if (err != null) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(err.toString())));
+                  }
+                },
+              );
             },
           );
         },
