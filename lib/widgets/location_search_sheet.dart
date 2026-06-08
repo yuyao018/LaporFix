@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 /// Reusable bottom sheet for searching a Malaysian location via Nominatim.
 /// Returns a [Map] with keys: `full`, `area`, `state`.
 /// Usage:
+/// ```dart
 ///   final result = await showModalBottomSheet<Map<String, String>>(
 ///     context: context,
 ///     isScrollControlled: true,
@@ -14,6 +15,7 @@ import '../theme/app_theme.dart';
 ///     ),
 ///     builder: (_) => const LocationSearchSheet(),
 ///   );
+/// ```
 class LocationSearchSheet extends StatefulWidget {
   const LocationSearchSheet({super.key});
 

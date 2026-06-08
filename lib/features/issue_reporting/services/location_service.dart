@@ -34,9 +34,15 @@ class LocationService {
       );
     }
 
-    //Get current device position
+    //Get current device position — try last known first, fall back to fresh request
+    final lastKnown = await Geolocator.getLastKnownPosition();
+    if (lastKnown != null) return lastKnown;
+
     return await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+    ).timeout(
+      const Duration(seconds: 8),
+      onTimeout: () => throw Exception('Location request timed out.'),
     );
   }
 

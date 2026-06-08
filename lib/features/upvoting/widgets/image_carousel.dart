@@ -54,7 +54,16 @@ class _ImageCarouselState extends State<ImageCarousel> {
                 return Image.network(
                   urls[i],
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const ColoredBox(
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const ColoredBox(
+                      color: AppTheme.surfaceGrey,
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, _, _) => const ColoredBox(
                     color: AppTheme.surfaceGrey,
                     child: Center(
                       child: Icon(

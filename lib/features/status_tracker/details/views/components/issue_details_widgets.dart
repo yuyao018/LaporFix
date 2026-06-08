@@ -329,6 +329,12 @@ class _ReportThumbnail extends StatelessWidget {
                     firstImageUrl,
                     fit: BoxFit.cover,
                     alignment: Alignment.center,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    },
                     errorBuilder: (context, error, stackTrace) {
                       return const Icon(
                         Icons.description_outlined,
@@ -373,6 +379,15 @@ class _CardImagePreview extends StatelessWidget {
                   firstImageUrl,
                   fit: BoxFit.cover,
                   alignment: Alignment.center,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const ColoredBox(
+                      color: Color(0xFFF3F4F6),
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  },
                   errorBuilder: (context, error, stackTrace) {
                     return const _ImageErrorPlaceholder();
                   },
@@ -466,9 +481,17 @@ class _ImageGalleryDialogState extends State<_ImageGalleryDialog> {
                           widget.imageUrls[index],
                           width: double.infinity,
                           height: double.infinity,
-                          // show the complete image
                           fit: BoxFit.contain,
                           alignment: Alignment.center,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            );
+                          },
                           errorBuilder: (context, error, stackTrace) {
                             return const _ImageErrorPlaceholder();
                           },

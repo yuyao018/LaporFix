@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -24,6 +25,9 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
   final FocusNode _additionalNotesFocusNode = FocusNode();
 
   bool _isFormVisible = false;
+  Timer? _searchDebounce;
+  Timer? _reverseGeocodeDebounce;
+  bool _isReverseGeocoding = false;
 
   // Initialize map location and retrieve the user's current location if needed
   @override
@@ -51,6 +55,8 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _reverseGeocodeDebounce?.cancel();
     _searchFocusNode.dispose();
     _addressDetailsFocusNode.dispose();
     _additionalNotesFocusNode.dispose();
@@ -121,9 +127,29 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                               onPositionChanged: (camera, hasGesture) {
                                 if (_isFormVisible) return;
                                 if (hasGesture) {
-                                  setState(() {
-                                    viewModel.updateMapLocation(camera.center);
-                                  });
+                                  viewModel.updateMapLocation(camera.center);
+                                  viewModel.clearSuggestions();
+                                  setState(() {});
+
+                                  // Debounce reverse geocode — fires 800ms after dragging stops
+                                  _reverseGeocodeDebounce?.cancel();
+                                  _reverseGeocodeDebounce = Timer(
+                                    const Duration(milliseconds: 800),
+                                    () async {
+                                      if (!mounted) return;
+                                      setState(() => _isReverseGeocoding = true);
+                                      final address = await viewModel
+                                          .locationService
+                                          .getAddress(
+                                            camera.center.latitude,
+                                            camera.center.longitude,
+                                          );
+                                      if (!mounted) return;
+                                      viewModel.addressController.text = address;
+                                      viewModel.setAddress(address);
+                                      setState(() => _isReverseGeocoding = false);
+                                    },
+                                  );
                                 }
                               },
                               onTap: (_, _) {
@@ -196,9 +222,15 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                     ),
                                     onChanged: (value) {
                                       viewModel.setAddress(value);
-                                      viewModel.searchAddress(value).then((_) {
-                                        if (mounted) setState(() {});
-                                      });
+                                      _searchDebounce?.cancel();
+                                      _searchDebounce = Timer(
+                                        const Duration(milliseconds: 500),
+                                        () {
+                                          viewModel.searchAddress(value).then((_) {
+                                            if (mounted) setState(() {});
+                                          });
+                                        },
+                                      );
                                     },
                                     decoration: InputDecoration(
                                       hintText: 'Enter location here...',
@@ -214,7 +246,7 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                       // Reduce font size when the form is visible
                                       suffixIcon: _isFormVisible
                                           ? null
-                                          : (viewModel.isSearching
+                                          : (_isReverseGeocoding || viewModel.isSearching
                                                 ? const Padding(
                                                     padding: EdgeInsets.all(
                                                       12.0,
@@ -322,27 +354,26 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                                 lon,
                                               );
 
-                                              setState(() {
-                                                viewModel.updateMapLocation(
-                                                  targetLatLng,
-                                                );
-                                                viewModel
-                                                        .addressController
-                                                        .text =
-                                                    suggestion['display_name'] ??
-                                                    '';
-                                                viewModel.setAddress(
-                                                  suggestion['display_name'] ??
-                                                      '',
-                                                );
-                                                viewModel.clearSuggestions();
-                                              });
-
                                               _searchFocusNode.unfocus();
-                                              _mapController.move(
+                                              viewModel.updateMapLocation(
                                                 targetLatLng,
-                                                16.0,
                                               );
+                                              viewModel.addressController.text =
+                                                  suggestion['display_name'] ?? '';
+                                              viewModel.setAddress(
+                                                suggestion['display_name'] ?? '',
+                                              );
+                                              viewModel.clearSuggestions();
+                                              setState(() {});
+
+                                              // Move camera after the frame rebuilds
+                                              WidgetsBinding.instance
+                                                  .addPostFrameCallback((_) {
+                                                _mapController.move(
+                                                  targetLatLng,
+                                                  16.0,
+                                                );
+                                              });
                                             },
                                           );
                                         },

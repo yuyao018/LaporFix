@@ -182,13 +182,12 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                                         const SizedBox(width: 10),
                                         InkWell(
                                           onTap: () async {
+                                            final messenger = ScaffoldMessenger.of(context);
                                             final err = await _viewModel
                                                 .toggleIssueLike(issue.id);
                                             if (!mounted) return;
                                             if (err != null) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
+                                              messenger.showSnackBar(
                                                 SnackBar(
                                                   content: Text(err.toString()),
                                                 ),
@@ -279,10 +278,9 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                                     comment: c,
                                     isLiked: uid.isNotEmpty && c.isLikedBy(uid),
                                     onLikeTap: () async {
+                                      final messenger = ScaffoldMessenger.of(context);
                                       if (uid.isEmpty) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        messenger.showSnackBar(
                                           const SnackBar(
                                             content: Text(
                                               'Please sign in to like comments.',
@@ -298,9 +296,7 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                                           );
                                       if (!mounted) return;
                                       if (err != null) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        messenger.showSnackBar(
                                           SnackBar(
                                             content: Text(err.toString()),
                                           ),
@@ -317,9 +313,10 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                       ChatBox(
                         hintText: 'Comment Something..',
                         onSend: (msg) async {
+                          final messenger = ScaffoldMessenger.of(context);
                           final user = FirebaseAuth.instance.currentUser;
                           if (user == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               const SnackBar(
                                 content: Text('Please sign in to comment.'),
                               ),
@@ -333,7 +330,7 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                           );
                           if (!mounted) return;
                           if (err != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               SnackBar(content: Text(err.toString())),
                             );
                             return;

@@ -16,16 +16,13 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:geocoding/geocoding.dart';
 
 class IssueReportingViewModel extends ChangeNotifier {
-  static final Uri _postcodeLookupEndpoint = Uri.parse(
-    'https://asia-southeast1-laporfix.cloudfunctions.net/lookupPostcodeName',
-  );
-
   // Model
   IssueReportModel report = IssueReportModel();
 
   // Services
   final ImageService _imageService = ImageService();
   final LocationService _locationService = LocationService();
+  LocationService get locationService => _locationService;
 
   // Firebase Firestore instance
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -167,7 +164,6 @@ class IssueReportingViewModel extends ChangeNotifier {
     final NavigatorState navigator = Navigator.of(context);
     final settings = AppSettingsService.instance;
     String postcode = '';
-    String postcodeName = '';
 
     isSubmittingReport = true;
     notifyListeners();
@@ -180,22 +176,24 @@ class IssueReportingViewModel extends ChangeNotifier {
     );
 
     try {
+      // Geocoding — timeout so it never hangs indefinitely
       if (report.latitude != null && report.longitude != null) {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          report.latitude!,
-          report.longitude!,
-        );
-
-        if (placemarks.isNotEmpty) {
-          postcode = placemarks.first.postalCode ?? '';
+        try {
+          final placemarks = await placemarkFromCoordinates(
+            report.latitude!,
+            report.longitude!,
+          ).timeout(const Duration(seconds: 6));
+          if (placemarks.isNotEmpty) {
+            postcode = placemarks.first.postalCode ?? '';
+          }
+        } catch (e) {
+          debugPrint('Postcode fetch failed: $e');
         }
       }
 
-      postcodeName = await _fetchPostcodeName(postcode);
-    } catch (e) {
-      debugPrint('Postcode fetch failed: $e');
-    }
-    try {
+      isSubmittingReport = true;
+      notifyListeners();
+
       // STEP A: Upload image to Firebase Storage
       String imageUrl = '';
       if (report.image != null) {
@@ -204,7 +202,15 @@ class IssueReportingViewModel extends ChangeNotifier {
         );
 
         UploadTask uploadTask = storageRef.putFile(report.image!);
-        TaskSnapshot snapshot = await uploadTask;
+        TaskSnapshot snapshot = await uploadTask.timeout(
+          const Duration(seconds: 60),
+          onTimeout: () {
+            uploadTask.cancel();
+            throw Exception(
+              'Image upload timed out. Please check your internet connection and try again.',
+            );
+          },
+        );
         imageUrl = await snapshot.ref.getDownloadURL();
       }
 
@@ -241,7 +247,6 @@ class IssueReportingViewModel extends ChangeNotifier {
               ? addressController.text.split(',').first.trim()
               : 'Selected Location',
           'postcode': postcode.isNotEmpty ? postcode : 'Unknown',
-          'postcodeName': postcodeName.isNotEmpty ? postcodeName : 'Unknown',
           'latitude':
               report.latitude ??
               0.0, // Fallback value if location is unavailable
@@ -280,7 +285,8 @@ class IssueReportingViewModel extends ChangeNotifier {
 
       // Display success dialog
       await showDialog(
-        context: navigator.context, // ignore: use_build_context_synchronously
+        // ignore: use_build_context_synchronously
+        context: navigator.context,
         barrierDismissible: true,
         barrierColor: Colors.black.withValues(alpha: 0.3),
         builder: (_) {
@@ -367,21 +373,25 @@ class IssueReportingViewModel extends ChangeNotifier {
         navigator.popUntil((route) => route.isFirst);
       });
     } catch (e) {
-      if (isSubmittingReport) {
-        navigator.pop(); // Ensure loading dialog is closed on error
-      }
+      // Always pop the loading dialog on error
+      if (context.mounted) navigator.pop();
 
-      // ignore: use_build_context_synchronously
       showDialog(
-        context: navigator.context, // ignore: use_build_context_synchronously
+        // ignore: use_build_context_synchronously
+        context: navigator.context,
         builder: (_) {
           return AlertDialog(
-            title: const Text('Error'),
-            content: Text('Failed to save database: ${e.toString()}'),
+            title: const Text('Submission Failed'),
+            content: Text(e.toString()),
+            actions: [
+              TextButton(
+                onPressed: () => navigator.pop(),
+                child: const Text('OK'),
+              ),
+            ],
           );
         },
       );
-      rethrow;
     } finally {
       isSubmittingReport = false;
       notifyListeners();
@@ -517,35 +527,6 @@ class IssueReportingViewModel extends ChangeNotifier {
         .doc('current');
   }
 
-  Future<String> _fetchPostcodeName(String postcode) async {
-    final normalizedPostcode = postcode.trim();
-    if (normalizedPostcode.isEmpty ||
-        normalizedPostcode.toLowerCase() == 'unknown') {
-      return '';
-    }
-
-    try {
-      final url = _postcodeLookupEndpoint.replace(
-        queryParameters: {'postcode': normalizedPostcode},
-      );
-
-      final response = await http.get(url);
-      if (response.statusCode != 200) {
-        debugPrint('Postcode name lookup failed: ${response.statusCode}');
-        return '';
-      }
-
-      final decoded = json.decode(response.body);
-      if (decoded is! Map<String, dynamic>) return '';
-
-      final postcodeName = decoded['postcodeName']?.toString().trim() ?? '';
-      return postcodeName == 'Unknown' ? '' : postcodeName;
-    } catch (e) {
-      debugPrint('Postcode name lookup failed: $e');
-      return '';
-    }
-  }
-
   double? _readDouble(Object? value) {
     if (value is num) return value.toDouble();
     if (value is String) return double.tryParse(value);
@@ -555,10 +536,13 @@ class IssueReportingViewModel extends ChangeNotifier {
   // New State for Search Suggestions
   List<Map<String, dynamic>> searchSuggestions = [];
   bool isSearching = false;
+  int _searchRequestId = 0; // used to discard stale responses
 
   StatusTrackerRepository? get repository => null;
 
-  /// Search locations using the OpenStreetMap Nominatim API
+  /// Search locations using the OpenStreetMap Nominatim API.
+  /// Debounced — ignores requests shorter than 3 chars.
+  /// Race-condition safe — stale responses are discarded.
   Future<void> searchAddress(String query) async {
     if (query.isEmpty || query.length < 3) {
       searchSuggestions = [];
@@ -566,34 +550,45 @@ class IssueReportingViewModel extends ChangeNotifier {
       return;
     }
 
+    // Increment request ID — any in-flight request with a different ID is stale
+    final requestId = ++_searchRequestId;
+
     isSearching = true;
     notifyListeners();
 
     try {
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=5&addressdetails=1',
+        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=5&addressdetails=1',
       );
 
       final response = await http.get(
         url,
         headers: {'User-Agent': 'com.group2.urbanfix'},
-      );
+      ).timeout(const Duration(seconds: 10));
+
+      // Discard if a newer request has already been fired
+      if (requestId != _searchRequestId) return;
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
         searchSuggestions = data.map((item) {
           return {
             'display_name': item['display_name'],
-            'lat': double.parse(item['lat']),
-            'lon': double.parse(item['lon']),
+            'lat': double.parse(item['lat'].toString()),
+            'lon': double.parse(item['lon'].toString()),
           };
         }).toList();
+      } else {
+        searchSuggestions = [];
       }
     } catch (e) {
       debugPrint('Search error: ${e.toString()}');
+      if (requestId == _searchRequestId) searchSuggestions = [];
     } finally {
-      isSearching = false;
-      notifyListeners();
+      if (requestId == _searchRequestId) {
+        isSearching = false;
+        notifyListeners();
+      }
     }
   }
 

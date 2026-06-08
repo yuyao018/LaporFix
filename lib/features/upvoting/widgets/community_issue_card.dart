@@ -68,7 +68,16 @@ class CommunityIssueCard extends StatelessWidget {
                         : Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Center(
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const ColoredBox(
+                                color: Color(0xFFE5E7EB),
+                                child: Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            },
+                            errorBuilder: (_, _, _) => const Center(
                               child: Icon(
                                 Icons.broken_image,
                                 size: 56,

@@ -1,0 +1,176 @@
+COMMUNITY FEED — USER KNOWLEDGE BASE
+=====================================
+Last updated: June 2026
+Feature path: lib/features/upvoting/
+
+Overview
+--------
+The Community Feed (also called "Community" in the app) is a public board where
+all submitted issue reports are visible to residents. Users can browse issues,
+support them with a like (upvote), leave comments, and like comments. The feed
+is read-only in terms of creating posts — posts are automatically populated from
+submitted issue reports.
+
+
+SCREENS
+-------
+
+1. Community Feed (UpvotingPage)
+   - Entry point of the feature, accessible from the bottom navigation bar.
+   - Displays a scrollable list of issue cards (CommunityIssueCard).
+   - Each card shows: category, description preview, location, like count, and
+     an image thumbnail (if available).
+   - Top 3 most-liked issues are highlighted with a "#1 Top", "#2 Top",
+     "#3 Top" badge on their card image.
+   - Pull-to-refresh reloads the feed from Firestore.
+
+2. Post Details Page (PostDetailsPage)
+   - Opened by tapping any card in the feed.
+   - Shows the full issue details:
+       • Image carousel (swipeable, with page indicator)
+       • Category label
+       • Full description
+       • Date posted (formatted as "d MMM yyyy")
+       • Location display name
+       • Like button with current count
+   - Below the details, shows all comments with their author, location, and
+     timestamp.
+   - Comment input bar is fixed at the bottom of the screen.
+
+3. (Admin only) Priority Insight Page (VoteInsightPage)
+   - Not accessible to regular users.
+   - Shows the top 3 unresolved issues ranked by total likes, with a
+     "+N/hr" trending indicator showing likes received in the last hour.
+
+
+USER ACTIONS
+------------
+
+Browsing the Feed
+  - The feed loads automatically on opening the Community tab.
+  - Defaults to "All" sort: Top 3 most-liked issues appear first, followed by
+    the rest sorted by newest.
+
+Searching
+  - A search bar in the app bar filters posts in real time.
+  - Search matches against: title, category, description, location heading,
+    location postcode, and issue ID.
+
+Sorting / Filtering
+  - Three sort options via the filter button:
+      • All       — Top 3 by likes first, then rest by newest.
+      • Newest    — All issues sorted by creation date descending.
+      • Most Supported — All issues sorted by total likes descending;
+                         ties broken by newest first.
+
+Liking a Post
+  - Tap the thumb-up icon on a card or inside Post Details.
+  - Toggling: tapping again removes the like (unlike).
+  - Requires the user to be signed in. If not signed in, an error is shown.
+  - Like state is reflected immediately; the icon turns blue when liked.
+  - Stored in Firestore as an entry in issue.community.likes[]:
+      { likedBy: <uid>, timestamp: <Timestamp> }
+
+Viewing Post Details
+  - Tap any card to open PostDetailsPage.
+  - Images are displayed in a swipeable carousel with a page counter badge.
+  - Images show a loading spinner while fetching from Firebase Storage.
+  - Broken images show a placeholder icon.
+  - Like button inside details works the same as on the card.
+
+Commenting
+  - The comment input (ChatBox) is at the bottom of PostDetailsPage.
+  - Requires the user to be signed in.
+  - Empty comments are rejected.
+  - On success, a floating snackbar "Comment posted" appears.
+  - Comment is stored in Firestore under issue.community.comments[] with:
+      { commentId, comment, timestamp, userId, userName, userRole,
+        userLocation, likes: [] }
+  - The user's display name and home area/state are automatically attached
+    to the comment from their profile.
+
+Sorting Comments
+  - A sort icon next to the "Comments" header opens a popup menu.
+  - Two options:
+      • Newest        — Comments sorted by timestamp descending.
+      • Most Supported — Comments sorted by like count descending;
+                         ties broken by newest first.
+  - Admin comments are always pinned to the top of the list regardless of sort.
+
+Liking a Comment
+  - Tap the like icon on any comment tile.
+  - Requires the user to be signed in; shows a snackbar if not.
+  - Toggle behaviour: like again to unlike.
+  - Stored in Firestore under the comment's likes[] array:
+      { likedBy: <uid>, timestamp: <Timestamp> }
+
+
+FIRESTORE DATA STRUCTURE
+------------------------
+Collection: issue
+Document fields used by Community Feed:
+
+  title           (String)  — issue category used as display title
+  category        (String)  — issue category
+  description     (String)  — full issue description
+  status          (String)  — "submitted" | "in progress" | "completed" | etc.
+  reporterID      (String)  — UID of the user who submitted the report
+  isDeleted       (bool)    — soft-delete flag; deleted issues are hidden
+  createdAt       (Timestamp)
+  lastUpdatedAt   (Timestamp)
+  reportImg       (List<String>) — Firebase Storage download URLs for images
+
+  location: {
+    heading       (String)  — human-readable area/street name
+    postcode      (String)
+    latitude      (double)
+    longitude     (double)
+  }
+
+  community: {
+    likes: [
+      { likedBy: <uid>, timestamp: <Timestamp> }
+    ],
+    comments: [
+      {
+        commentId:    (String)    — "<uid>_<microsecondsSinceEpoch>"
+        comment:      (String)    — comment text
+        timestamp:    (Timestamp)
+        userId:       (String)    — commenter's UID
+        userName:     (String)    — commenter's display name
+        userRole:     (String)    — "admin" or "user"
+        userLocation: (String)    — short home location e.g. "Ayer Itam, Penang"
+        likes: [
+          { likedBy: <uid>, timestamp: <Timestamp> }
+        ]
+      }
+    ]
+  }
+
+
+BUSINESS RULES
+--------------
+- An issue with isDeleted = true is never shown in the feed.
+- An issue is considered "unresolved" if its status is one of:
+    "submitted", "in progress", "inprogress"
+- A user can only like a post/comment once. A second tap removes the like.
+- Likes and comments are written via Firestore transactions to prevent
+  race conditions on concurrent updates.
+- The like count displayed on a card is the length of community.likes[].
+- The comment count is the length of community.comments[].
+- Admin comments always appear at the top of the comment list.
+- The Top 3 ranking is computed client-side from the loaded issues list and
+  is not stored in Firestore.
+- The "#N Top" badge on cards is based on the global Top 3 by total likes,
+  not affected by the current search or sort filter.
+
+
+ERROR HANDLING (User-facing)
+-----------------------------
+- If the feed fails to load: "Could not load community posts." is shown.
+- If a post fails to load in details: "Could not load post." is shown.
+- If a like/comment action fails: a snackbar shows the error message.
+- If the user is not signed in and tries to like or comment: a snackbar
+  prompts them to sign in.
+- Images that fail to load show a placeholder broken-image icon.
+- Images display a circular progress indicator while loading.
