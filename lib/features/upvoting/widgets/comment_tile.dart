@@ -10,11 +10,23 @@ class CommentTile extends StatelessWidget {
     required this.comment,
     required this.isLiked,
     required this.onLikeTap,
+    this.photoUrl,
+    this.overrideUserName,
+    this.overrideArea,
   });
 
   final CommunityComment comment;
   final bool isLiked;
   final VoidCallback onLikeTap;
+
+  /// From users.photoURL
+  final String? photoUrl;
+
+  /// From users.username
+  final String? overrideUserName;
+
+  /// From users.area
+  final String? overrideArea;
 
   static const _unlikedGrey = Color(0xFF98A2B3);
 
@@ -26,6 +38,15 @@ class CommentTile extends StatelessWidget {
         ? ''
         : DateFormat('d MMM yyyy').format(comment.timestamp!);
 
+    final name = (overrideUserName ?? comment.userName).trim().isNotEmpty
+        ? (overrideUserName ?? comment.userName).trim()
+        : (comment.isAdmin ? 'Admin' : 'User');
+
+    final area = (overrideArea ?? comment.userLocation).trim();
+
+    final trimmedPhoto = (photoUrl ?? '').trim();
+    final hasPhoto = trimmedPhoto.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -36,15 +57,18 @@ class CommentTile extends StatelessWidget {
             backgroundColor: comment.isAdmin
                 ? const Color(0xFFE8ECFF)
                 : AppTheme.surfaceGrey,
-            child: Icon(
-              comment.isAdmin
-                  ? Icons.admin_panel_settings_rounded
-                  : Icons.person_rounded,
-              color: comment.isAdmin
-                  ? AppTheme.primaryBlue
-                  : AppTheme.textSecondary,
-              size: 18,
-            ),
+            backgroundImage: hasPhoto ? NetworkImage(trimmedPhoto) : null,
+            child: hasPhoto
+                ? null
+                : Icon(
+                    comment.isAdmin
+                        ? Icons.admin_panel_settings_rounded
+                        : Icons.person_rounded,
+                    color: comment.isAdmin
+                        ? AppTheme.primaryBlue
+                        : AppTheme.textSecondary,
+                    size: 18,
+                  ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -69,14 +93,11 @@ class CommentTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // header row
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          comment.userName.isEmpty
-                              ? (comment.isAdmin ? 'Admin' : 'User')
-                              : comment.userName,
+                          name,
                           style: tt.bodySmall?.copyWith(
                             color: AppTheme.textPrimary,
                             fontWeight: FontWeight.w700,
@@ -111,7 +132,6 @@ class CommentTile extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-
                   Text(
                     comment.comment,
                     style: tt.bodySmall?.copyWith(
@@ -121,10 +141,9 @@ class CommentTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-
                   Row(
                     children: [
-                      if (dateText.isNotEmpty) ...[
+                      if (dateText.isNotEmpty)
                         Text(
                           dateText,
                           style: tt.bodySmall?.copyWith(
@@ -132,8 +151,7 @@ class CommentTile extends StatelessWidget {
                             fontSize: 11,
                           ),
                         ),
-                      ],
-                      if (comment.userLocation.trim().isNotEmpty) ...[
+                      if (area.isNotEmpty) ...[
                         const SizedBox(width: 10),
                         const Icon(
                           Icons.location_on_outlined,
@@ -143,7 +161,7 @@ class CommentTile extends StatelessWidget {
                         const SizedBox(width: 2),
                         Expanded(
                           child: Text(
-                            comment.userLocation,
+                            area,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: tt.bodySmall?.copyWith(
