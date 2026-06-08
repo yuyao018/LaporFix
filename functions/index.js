@@ -4,7 +4,9 @@ const {
   onDocumentCreated,
   onDocumentUpdated,
 } = require("firebase-functions/v2/firestore");
+const { onRequest } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
+const { defineSecret } = require("firebase-functions/params");
 
 // used to print logs in Firebase Functions console.
 const logger = require("firebase-functions/logger");
@@ -30,6 +32,79 @@ const INVALID_TOKEN_CODES = new Set([
   "messaging/invalid-registration-token",
   "messaging/registration-token-not-registered",
 ]);
+
+const googleMapsApiKey = defineSecret("GOOGLE_MAPS_API_KEY");
+
+/**
+ * Function: lookupPostcodeName
+ *
+ * Trigger:
+ * Public HTTPS endpoint called by the Flutter app with:
+ * ?postcode=11900
+ *
+ * Purpose:
+ * Proxies Google Geocoding requests so the Google Maps API key is stored as a
+ * Firebase Secret instead of being committed to the Flutter client.
+ */
+exports.lookupPostcodeName = onRequest(
+  { secrets: [googleMapsApiKey], cors: true },
+  async (req, res) => {
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+
+    if (req.method !== "GET") {
+      res.status(405).json({ error: "method-not-allowed" });
+      return;
+    }
+
+    const postcode = String(req.query.postcode || "").trim();
+    if (!/^\d{5}$/.test(postcode)) {
+      res.status(400).json({ error: "invalid-postcode" });
+      return;
+    }
+
+    const apiKey = googleMapsApiKey.value();
+    if (!apiKey) {
+      logger.error("Google Maps API key secret is not configured");
+      res.status(500).json({ error: "geocode-not-configured" });
+      return;
+    }
+
+    const geocodeUrl = new URL(
+      "https://maps.googleapis.com/maps/api/geocode/json",
+    );
+    geocodeUrl.searchParams.set(
+      "components",
+      `postal_code:${postcode}|country:MY`,
+    );
+    geocodeUrl.searchParams.set("key", apiKey);
+
+    try {
+      const response = await fetch(geocodeUrl);
+      if (!response.ok) {
+        logger.error("Google postcode lookup HTTP error", {
+          postcode,
+          status: response.status,
+        });
+        res.status(502).json({ error: "geocode-request-failed" });
+        return;
+      }
+
+      const payload = await response.json();
+      const postcodeName = extractPostcodeName(payload, postcode);
+
+      res.json({
+        postcode,
+        postcodeName: postcodeName || "Unknown",
+      });
+    } catch (error) {
+      logger.error("Google postcode lookup failed", { postcode, error });
+      res.status(502).json({ error: "geocode-request-failed" });
+    }
+  },
+);
 
 /**
  * Function: sendAnnouncementNotification
@@ -582,6 +657,57 @@ function trimBody(value) {
   const text = String(value).replace(/\s+/g, " ").trim();
 
   return text.length > 140 ? `${text.substring(0, 137)}...` : text;
+}
+
+/**
+ * Extract a human-readable Malaysian area name from Google Geocoding output.
+ *
+ * For a postcode like 11900, this prefers locality-like components such as
+ * "Bayan Lepas" and falls back to the first formatted address segment.
+ */
+function extractPostcodeName(payload, postcode) {
+  if (!payload || payload.status !== "OK" || !Array.isArray(payload.results)) {
+    return "";
+  }
+
+  const [firstResult] = payload.results;
+  if (!firstResult || typeof firstResult !== "object") return "";
+
+  const components = Array.isArray(firstResult.address_components)
+    ? firstResult.address_components
+    : [];
+  const preferredTypes = [
+    "locality",
+    "postal_town",
+    "sublocality",
+    "sublocality_level_1",
+    "administrative_area_level_3",
+    "administrative_area_level_2",
+  ];
+
+  for (const preferredType of preferredTypes) {
+    for (const component of components) {
+      const longName = String(component?.long_name || "").trim();
+      const types = Array.isArray(component?.types) ? component.types : [];
+
+      if (longName && longName !== postcode && types.includes(preferredType)) {
+        return longName;
+      }
+    }
+  }
+
+  const formattedAddress = String(firstResult.formatted_address || "").trim();
+  if (!formattedAddress) return "";
+
+  return formattedAddress
+    .split(",")[0]
+    .trim()
+    .replace(new RegExp(`^${escapeRegExp(postcode)}\\s*`), "")
+    .trim();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
