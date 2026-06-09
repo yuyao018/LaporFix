@@ -97,6 +97,10 @@ class StatusTrackerViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteIssue(String issueId) async {
+    await _repository.softDeleteIssue(issueId);
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();

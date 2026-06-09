@@ -128,9 +128,66 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
             return _IssueCountCaption(visibleCount: issues.length);
           }
 
-          return IssueSummaryCard(
-            issue: issues[index],
-            onTap: () => _openIssueDetails(issues[index]),
+          final issue = issues[index];
+          return Dismissible(
+            key: ValueKey(issue.id),
+            direction: DismissDirection.endToStart,
+            // Require a confirmation before the delete actually fires
+            confirmDismiss: (_) async {
+              return await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: const Text('Delete report?'),
+                  content: const Text(
+                    'This will permanently remove your report. This action cannot be undone.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              ) ?? false;
+            },
+            onDismissed: (_) async {
+              try {
+                await _viewModel.deleteIssue(issue.id);
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not delete the report. Please try again.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            // Red trash background revealed on swipe
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 24),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_rounded, color: Colors.white, size: 28),
+            ),
+            child: IssueSummaryCard(
+              issue: issue,
+              onTap: () => _openIssueDetails(issue),
+            ),
           );
         },
       ),

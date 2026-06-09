@@ -357,7 +357,6 @@ class ChatViewModel extends ChangeNotifier {
         'mbpj', 'dbkl', 'maintenance', 'penyelenggaraan',
       ];
 
-      final area = userArea.toLowerCase();
       final state = userState.toLowerCase();
       final matches = <Map<String, dynamic>>[];
 
@@ -376,17 +375,12 @@ class ChatViewModel extends ChangeNotifier {
 
         final target = data['target'] as Map<String, dynamic>? ?? {};
         final location = target['location'] as Map<String, dynamic>? ?? {};
-        final annArea = (location['area'] ?? '').toString().toLowerCase();
         final annState = (location['state'] ?? '').toString().toLowerCase();
         final annFull = (location['full'] ?? '').toString().toLowerCase();
 
-        bool locationMatch = area.isEmpty && state.isEmpty;
-        if (!locationMatch && area.isNotEmpty) {
-          locationMatch = annArea == area ||
-              annFull.contains(area) ||
-              annArea.contains(area);
-        }
-        if (!locationMatch && state.isNotEmpty) {
+        // Road maintenance is state-wide — user may drive anywhere in their state
+        bool locationMatch = state.isEmpty; // no location set → show all
+        if (!locationMatch) {
           locationMatch = annState == state || annFull.contains(state);
         }
         if (!locationMatch) continue;
@@ -404,13 +398,9 @@ class ChatViewModel extends ChangeNotifier {
       final List<ChatMessage> assistantMessages;
 
       if (matches.isEmpty) {
-        final loc = area.isNotEmpty
-            ? area
-            : state.isNotEmpty
-            ? state
-            : 'your area';
+        final loc = state.isNotEmpty ? state : 'your state';
         final reply =
-            '✅ No road maintenance announcements found for $loc at the moment.\n\n'
+            '✅ No road maintenance announcements found in $loc at the moment.\n\n'
             'If you spot a road issue, you can report it directly through the app.';
         assistantPayloads = [{'content': reply}];
         assistantMessages = [

@@ -91,6 +91,14 @@ class StatusTrackerRepository {
     return _normalizeRole(doc.data()?['role']);
   }
 
+  /// Soft-deletes an issue by setting isDeleted = true in Firestore.
+  Future<void> softDeleteIssue(String issueId) async {
+    await _firestore
+        .collection(collectionPath)
+        .doc(issueId)
+        .update({'isDeleted': true});
+  }
+
   String _normalizeRole(Object? value) {
     return (value ?? 'user').toString().trim().toLowerCase();
   }
