@@ -114,6 +114,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
     final vm = context.read<ChatViewModel>();
     if (suggestion == 'Check for water/power cut') {
       await vm.checkDisruptions();
+    } else if (suggestion == 'Check for road maintenance') {
+      await vm.checkRoadMaintenance();
     } else if (suggestion == 'Track my existing ticket') {
       await vm.checkTickets();
     } else if (suggestion == ChatViewModel.reportIssueSuggestion) {

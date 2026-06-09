@@ -81,6 +81,7 @@ class ChatViewModel extends ChangeNotifier {
     reportIssueSuggestion,
     'Track my existing ticket',
     'Check for water/power cut',
+    'Check for road maintenance',
   ];
 
   // ── Greeting ──────────────────────────────────────────────────────────────
@@ -223,18 +224,27 @@ class ChatViewModel extends ChangeNotifier {
 
       const disruptionKeywords = [
         'water', 'air', 'bekalan air', 'power', 'electric', 'elektrik',
-        'tenaga', 'tnb', 'road', 'jalan', 'highway', 'construction',
-        'traffic', 'outage', 'disruption', 'gangguan', 'cut', 'putus',
-        'maintenance', 'penyelenggaraan',
+        'tenaga', 'tnb', 'outage', 'blackout', 'disruption', 'gangguan',
+        'cut', 'putus', 'bekalan elektrik',
       ];
 
       final area = userArea.toLowerCase();
       final state = userState.toLowerCase();
       final matches = <Map<String, dynamic>>[];
 
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
       for (final doc in snapshot.docs) {
         final data = doc.data();
         if (data['isDeleted'] == true) continue;
+
+        // Only show upcoming announcements (today onwards), skip past ones
+        final createdAt = data['createdAt'];
+        if (createdAt is Timestamp) {
+          final announcementDate = createdAt.toDate();
+          if (announcementDate.isBefore(today)) continue;
+        }
 
         final target = data['target'] as Map<String, dynamic>? ?? {};
         final location = target['location'] as Map<String, dynamic>? ?? {};
@@ -273,7 +283,7 @@ class ChatViewModel extends ChangeNotifier {
             ? state
             : 'your area';
         final reply =
-            '✅ No water, power, or road maintenance announcements found for $loc at the moment.\n\n'
+            '✅ No water or power disruption announcements found for $loc at the moment.\n\n'
             'If you are experiencing an issue, you can report it directly through the app.';
         assistantPayloads = [
           {'content': reply},
@@ -314,6 +324,131 @@ class ChatViewModel extends ChangeNotifier {
           userMessage: 'Check for water/power cut',
           assistantMessages: [
             {'content': 'Sorry, I could not check announcements right now. Please try again.'},
+          ],
+          sessionId: sessionId,
+        );
+      } catch (_) {}
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Road maintenance check ─────────────────────────────────────────────────
+  Future<void> checkRoadMaintenance() async {
+    hasStartedChat = true;
+    items.add(MessageItem(ChatMessage(
+      text: 'Check for road maintenance',
+      role: MessageRole.user,
+      timestamp: DateTime.now(),
+    )));
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('announcements')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      const roadKeywords = [
+        'road', 'jalan', 'highway', 'lebuhraya', 'traffic', 'lalu lintas',
+        'construction', 'kerja', 'pothole', 'resurfacing', 'lubang',
+        'mbpj', 'dbkl', 'maintenance', 'penyelenggaraan',
+      ];
+
+      final area = userArea.toLowerCase();
+      final state = userState.toLowerCase();
+      final matches = <Map<String, dynamic>>[];
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['isDeleted'] == true) continue;
+
+        // Only show upcoming announcements (today onwards), skip past ones
+        final createdAt = data['createdAt'];
+        if (createdAt is Timestamp) {
+          if (createdAt.toDate().isBefore(today)) continue;
+        }
+
+        final target = data['target'] as Map<String, dynamic>? ?? {};
+        final location = target['location'] as Map<String, dynamic>? ?? {};
+        final annArea = (location['area'] ?? '').toString().toLowerCase();
+        final annState = (location['state'] ?? '').toString().toLowerCase();
+        final annFull = (location['full'] ?? '').toString().toLowerCase();
+
+        bool locationMatch = area.isEmpty && state.isEmpty;
+        if (!locationMatch && area.isNotEmpty) {
+          locationMatch = annArea == area ||
+              annFull.contains(area) ||
+              annArea.contains(area);
+        }
+        if (!locationMatch && state.isNotEmpty) {
+          locationMatch = annState == state || annFull.contains(state);
+        }
+        if (!locationMatch) continue;
+
+        final title = (data['title'] ?? '').toString().toLowerCase();
+        final caption = (data['caption'] ?? '').toString().toLowerCase();
+        final combined = '$title $caption';
+        if (roadKeywords.any((kw) => combined.contains(kw))) {
+          matches.add(data);
+        }
+      }
+
+      const userMessage = 'Check for road maintenance';
+      final List<Map<String, dynamic>> assistantPayloads;
+      final List<ChatMessage> assistantMessages;
+
+      if (matches.isEmpty) {
+        final loc = area.isNotEmpty
+            ? area
+            : state.isNotEmpty
+            ? state
+            : 'your area';
+        final reply =
+            '✅ No road maintenance announcements found for $loc at the moment.\n\n'
+            'If you spot a road issue, you can report it directly through the app.';
+        assistantPayloads = [{'content': reply}];
+        assistantMessages = [
+          ChatMessage(
+              text: reply,
+              role: MessageRole.assistant,
+              timestamp: DateTime.now()),
+        ];
+      } else {
+        final ts = DateTime.now();
+        assistantPayloads = [];
+        assistantMessages = [];
+        for (final data in matches) {
+          final notice = DisruptionNotice.fromAnnouncement(data);
+          assistantPayloads.add({'disruption_notice': notice.toJson()});
+          assistantMessages.add(ChatMessage(
+            text: '',
+            role: MessageRole.assistant,
+            timestamp: ts,
+            disruptionNotice: notice,
+          ));
+        }
+      }
+
+      items.addAll(assistantMessages.map(MessageItem.new));
+      sessionId = await _service.saveTurn(
+        userMessage: userMessage,
+        assistantMessages: assistantPayloads,
+        sessionId: sessionId,
+      );
+    } catch (_) {
+      _addErrorMessage(
+          'Sorry, I could not check road maintenance announcements right now. Please try again.');
+      try {
+        await _service.saveTurn(
+          userMessage: 'Check for road maintenance',
+          assistantMessages: [
+            {'content': 'Sorry, I could not check road maintenance announcements right now. Please try again.'},
           ],
           sessionId: sessionId,
         );
