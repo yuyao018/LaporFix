@@ -1,12 +1,8 @@
 // model for the nested location map
 class IssueLocation {
-  const IssueLocation({
-    required this.heading,
-    required this.postcode,
-    required this.coordinates,
-  });
+  const IssueLocation({required this.postcodeName, required this.postcode, required this.coordinates});
 
-  final String heading;
+  final String postcodeName;
   final String postcode;
   final List<String> coordinates;
 
@@ -14,14 +10,14 @@ class IssueLocation {
     final rawCoordinates = map?['precise_location'];
 
     return IssueLocation(
-      heading: _readString(map?['heading']),
+      postcodeName: _readString(map?['postcodeName']),
       postcode: _readString(map?['postcode']),
       coordinates: _readCoordinates(rawCoordinates),
     );
   }
 
   String get displayName {
-    if (heading.isNotEmpty) return heading;
+    if (postcodeName.isNotEmpty) return postcodeName;
     if (postcode.isNotEmpty) return postcode;
     if (coordinates.isNotEmpty) return coordinates.join(', ');
     return 'Location unavailable';
@@ -31,10 +27,7 @@ class IssueLocation {
 
   static List<String> _readCoordinates(Object? value) {
     if (value is Iterable) {
-      return value
-          .map((item) => item.toString().trim())
-          .where((item) => item.isNotEmpty)
-          .toList(growable: false);
+      return value.map((item) => item.toString().trim()).where((item) => item.isNotEmpty).toList(growable: false);
     }
 
     final text = value?.toString().trim();

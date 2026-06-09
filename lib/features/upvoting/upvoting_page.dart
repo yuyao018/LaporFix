@@ -127,12 +127,13 @@ class _UpvotingPageState extends State<UpvotingPage> {
                 reporterPhotoUrl: reporterPhoto,
                 onTap: () => _openDetails(issue.id),
                 onLikeTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
                   final err = await _viewModel.toggleLike(issue.id);
                   if (!mounted) return;
                   if (err != null) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(err.toString())));
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(err.toString())),
+                    );
                   }
                 },
               );
