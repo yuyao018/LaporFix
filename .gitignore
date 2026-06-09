@@ -47,5 +47,9 @@ app.*.map.json
 # Backend secrets
 backend/.env
 backend/serviceAccountKey.json
-backend/chroma_db/
+
+# ChromaDB vector store (generated locally, not committed)
+backend/chroma_db/*
+!backend/chroma_db/.gitkeep
+
 functions/node_modules/

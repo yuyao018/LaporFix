@@ -94,6 +94,7 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                     ),
                     child: SafeArea(
                       top: false,
+                      bottom: false,
                       child: _buildBody(issueSnap, reporterProfile?.area ?? ''),
                     ),
                   ),
