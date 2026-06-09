@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/community_issue.dart';
+import '../models/community_user_profile.dart';
 import '../services/community_repository.dart';
 
 enum CommunitySort { all, newest, mostSupported }
@@ -42,13 +43,13 @@ class CommunityViewModel extends ChangeNotifier {
   String _searchQuery = '';
   CommunitySort _sort = CommunitySort.all;
 
+  // Cache user profile fetches (for summary cards).
+  final Map<String, Future<CommunityUserProfile?>> _profileFutures = {};
+
   bool get isAdmin => _isAdmin;
   bool get isLoading => _isLoading;
   Object? get error => _error;
   bool get hasError => _error != null;
-
-  String get searchQuery => _searchQuery;
-  CommunitySort get sort => _sort;
 
   void start() {
     _issuesSub?.cancel();
@@ -92,6 +93,15 @@ class CommunityViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<CommunityUserProfile?> profileFor(String uid) {
+    final key = uid.trim();
+    if (key.isEmpty) return Future.value(null);
+    return _profileFutures.putIfAbsent(
+      key,
+      () => _repository.fetchUserProfile(key),
+    );
+  }
+
   List<CommunityIssue> get _activeIssues =>
       _issues.where((i) => !i.isDeleted).toList(growable: false);
 
@@ -101,8 +111,8 @@ class CommunityViewModel extends ChangeNotifier {
       ..sort((a, b) {
         final cmp = b.likesCount.compareTo(a.likesCount);
         if (cmp != 0) return cmp;
-        final ad = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bd = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final ad = a.sortDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bd = b.sortDate ?? DateTime.fromMillisecondsSinceEpoch(0);
         return bd.compareTo(ad);
       });
     return list.take(3).toList(growable: false);
@@ -127,8 +137,8 @@ class CommunityViewModel extends ChangeNotifier {
         .toList(growable: true);
 
     int sortByNewest(CommunityIssue a, CommunityIssue b) {
-      final ad = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final bd = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final ad = a.sortDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bd = b.sortDate ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bd.compareTo(ad);
     }
 
@@ -148,7 +158,6 @@ class CommunityViewModel extends ChangeNotifier {
         return filtered;
 
       case CommunitySort.all:
-        // All = show Top 3 first (by likes), then the rest by newest.
         final topIds = top3Issues.map((e) => e.id).toSet();
         final top =
             filtered.where((i) => topIds.contains(i.id)).toList(growable: true)

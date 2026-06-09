@@ -6,50 +6,21 @@ import 'community_like.dart';
 class CommunityIssueLocation {
   final String heading;
   final String postcode;
-  final GeoPoint? preciseLocation;
-  final double? latitude;
-  final double? longitude;
+  final GeoPoint? preciseLocation; // real schema: precise_location
 
   const CommunityIssueLocation({
     required this.heading,
     required this.postcode,
     this.preciseLocation,
-    this.latitude,
-    this.longitude,
   });
-
-  String get displayName {
-    if (heading.trim().isNotEmpty) return heading.trim();
-    if (postcode.trim().isNotEmpty) return postcode.trim();
-    if (preciseLocation != null) {
-      return '${preciseLocation!.latitude.toStringAsFixed(5)}, ${preciseLocation!.longitude.toStringAsFixed(5)}';
-    }
-    if (latitude != null && longitude != null) {
-      return '${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)}';
-    }
-    return 'Location unavailable';
-  }
 
   factory CommunityIssueLocation.fromMap(Map<String, dynamic>? map) {
     final data = map ?? const <String, dynamic>{};
-    final geo = data['preciseLocation'] ?? data['precise_location'];
-    GeoPoint? gp;
-    if (geo is GeoPoint) gp = geo;
-
-    // fallback if your existing issue docs store latitude/longitude fields:
-    double? lat;
-    double? lng;
-    final rawLat = data['latitude'];
-    final rawLng = data['longitude'];
-    if (rawLat is num) lat = rawLat.toDouble();
-    if (rawLng is num) lng = rawLng.toDouble();
-
+    final geo = data['precise_location']; // <-- exact field name
     return CommunityIssueLocation(
       heading: (data['heading'] ?? '').toString(),
       postcode: (data['postcode'] ?? '').toString(),
-      preciseLocation: gp,
-      latitude: lat,
-      longitude: lng,
+      preciseLocation: geo is GeoPoint ? geo : null,
     );
   }
 }
@@ -79,9 +50,7 @@ class CommunityData {
               .map(
                 (m) => CommunityComment.fromMap(Map<String, dynamic>.from(m)),
               )
-              .where(
-                (c) => c.commentId.isNotEmpty,
-              ) // commentId required for likes
+              .where((c) => c.comment.trim().isNotEmpty)
               .toList(growable: false)
         : const <CommunityComment>[];
 
@@ -91,14 +60,21 @@ class CommunityData {
 
 class CommunityIssue {
   final String id;
+
   final String title;
   final String category;
   final String description;
   final String status;
   final String reporterId;
+
+  final String publicReporterName;
+  final String reporterVisibility;
+
   final bool isDeleted;
+
   final DateTime? createdAt;
   final DateTime? lastUpdatedAt;
+
   final List<String> reportImages;
   final CommunityIssueLocation location;
   final CommunityData community;
@@ -110,6 +86,8 @@ class CommunityIssue {
     required this.description,
     required this.status,
     required this.reporterId,
+    required this.publicReporterName,
+    required this.reporterVisibility,
     required this.isDeleted,
     required this.createdAt,
     required this.lastUpdatedAt,
@@ -128,6 +106,15 @@ class CommunityIssue {
     return s == 'submitted' || s == 'in progress' || s == 'inprogress';
   }
 
+  DateTime? get sortDate => createdAt ?? lastUpdatedAt;
+
+  String get reporterDisplayText {
+    final vis = reporterVisibility.trim().toLowerCase();
+    if (vis == 'anonymous') return 'Anonymous';
+    if (publicReporterName.trim().isNotEmpty) return publicReporterName.trim();
+    return 'Resident';
+  }
+
   String get searchableText => [
     title,
     category,
@@ -139,14 +126,13 @@ class CommunityIssue {
 
   factory CommunityIssue.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const <String, dynamic>{};
-    final community = CommunityData.fromMap(
-      data['community'] is Map
-          ? Map<String, dynamic>.from(data['community'])
-          : null,
-    );
+
+    final communityMap = data['community'] is Map
+        ? Map<String, dynamic>.from(data['community'] as Map)
+        : null;
 
     final locationMap = data['location'] is Map
-        ? Map<String, dynamic>.from(data['location'])
+        ? Map<String, dynamic>.from(data['location'] as Map)
         : null;
 
     final reportImgRaw = data['reportImg'];
@@ -164,12 +150,14 @@ class CommunityIssue {
       description: (data['description'] ?? '').toString(),
       status: (data['status'] ?? '').toString(),
       reporterId: (data['reporterID'] ?? '').toString(),
+      publicReporterName: (data['publicReporterName'] ?? '').toString(),
+      reporterVisibility: (data['reporterVisibility'] ?? '').toString(),
       isDeleted: data['isDeleted'] == true,
       createdAt: _readDate(data['createdAt']),
-      lastUpdatedAt: _readDate(data['lastUpdatedAt'] ?? data['lastUpdatedAt']),
+      lastUpdatedAt: _readDate(data['lastUpdatedAt']),
       reportImages: reportImgs,
       location: CommunityIssueLocation.fromMap(locationMap),
-      community: community,
+      community: CommunityData.fromMap(communityMap),
     );
   }
 
