@@ -55,7 +55,7 @@ class _UpvotingPageState extends State<UpvotingPage> {
             onInsightTap: _viewModel.isAdmin ? _openInsights : null,
             showSearchBar: true,
             showFilter: true,
-            filterList: const ['All', 'Newest', 'Most Supported'],
+            filterList: const ['All', 'Newest', 'Most Supported', 'Complete'],
             onSearchChanged: _viewModel.updateSearchQuery,
             onFilterChanged: _viewModel.updateSortLabel,
           ),

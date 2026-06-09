@@ -7,13 +7,14 @@ import '../models/community_issue.dart';
 import '../models/community_user_profile.dart';
 import '../services/community_repository.dart';
 
-enum CommunitySort { all, newest, mostSupported }
+enum CommunitySort { all, newest, mostSupported, complete }
 
 extension CommunitySortLabel on CommunitySort {
   String get label => switch (this) {
     CommunitySort.all => 'All',
     CommunitySort.newest => 'Newest',
     CommunitySort.mostSupported => 'Most Supported',
+    CommunitySort.complete => 'Complete',
   };
 
   static CommunitySort fromLabel(String label) {
@@ -22,6 +23,7 @@ extension CommunitySortLabel on CommunitySort {
     if (normalized == 'most supported' || normalized == 'most_supported') {
       return CommunitySort.mostSupported;
     }
+    if (normalized == 'complete') return CommunitySort.complete;
     return CommunitySort.all;
   }
 }
@@ -105,9 +107,9 @@ class CommunityViewModel extends ChangeNotifier {
   List<CommunityIssue> get _activeIssues =>
       _issues.where((i) => !i.isDeleted).toList(growable: false);
 
-  /// Global Top 3 by total likes (not affected by current filter/search).
+  /// Global Top 3 by total likes — unresolved issues only.
   List<CommunityIssue> get top3Issues {
-    final list = _activeIssues.toList(growable: true)
+    final list = _activeIssues.where((i) => i.isUnresolved).toList(growable: true)
       ..sort((a, b) {
         final cmp = b.likesCount.compareTo(a.likesCount);
         if (cmp != 0) return cmp;
@@ -129,7 +131,12 @@ class CommunityViewModel extends ChangeNotifier {
   List<CommunityIssue> get visibleIssues {
     final query = _searchQuery.trim().toLowerCase();
 
-    final filtered = _activeIssues
+    // 'Complete' filter only shows resolved; all other filters only show unresolved
+    final pool = _sort == CommunitySort.complete
+        ? _activeIssues.where((i) => !i.isUnresolved)
+        : _activeIssues.where((i) => i.isUnresolved);
+
+    final filtered = pool
         .where((issue) {
           if (query.isEmpty) return true;
           return issue.searchableText.contains(query);
@@ -155,6 +162,11 @@ class CommunityViewModel extends ChangeNotifier {
 
       case CommunitySort.mostSupported:
         filtered.sort(sortByMostSupported);
+        return filtered;
+
+      case CommunitySort.complete:
+        // completed issues sorted newest first
+        filtered.sort(sortByNewest);
         return filtered;
 
       case CommunitySort.all:
