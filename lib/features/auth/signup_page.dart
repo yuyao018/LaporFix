@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_theme.dart';
+import '../../services/app_settings_service.dart';
 import '../../widgets/button.dart';
 import '../../widgets/location_search_sheet.dart';
 
@@ -83,11 +84,8 @@ class _SignupPageState extends State<SignupPage> {
     setState(() => _isLoading = true);
 
     try {
-      final credential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       final user = credential.user;
       if (user != null) {
@@ -103,6 +101,7 @@ class _SignupPageState extends State<SignupPage> {
           'role': 'user',
           'createdAt': FieldValue.serverTimestamp(),
           'photoURL': '',
+          'appSettings': Map<String, dynamic>.from(AppSettingsService.defaults),
         });
       }
     } on FirebaseAuthException catch (e) {
@@ -135,10 +134,7 @@ class _SignupPageState extends State<SignupPage> {
         // ── Username field ──
         Text('Username', style: tt.bodySmall),
         const SizedBox(height: 8),
-        _InputField(
-          controller: _usernameController,
-          hintText: 'User A',
-        ),
+        _InputField(controller: _usernameController, hintText: 'User A'),
         const SizedBox(height: 20),
 
         // ── Email field ──
@@ -183,8 +179,7 @@ class _SignupPageState extends State<SignupPage> {
               color: AppTheme.textSecondary,
               size: 20,
             ),
-            onPressed: () =>
-                setState(() => _obscureConfirm = !_obscureConfirm),
+            onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
           ),
         ),
         const SizedBox(height: 20),
@@ -218,8 +213,11 @@ class _SignupPageState extends State<SignupPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Icon(Icons.location_on_outlined,
-                    color: AppTheme.textSecondary, size: 20),
+                const Icon(
+                  Icons.location_on_outlined,
+                  color: AppTheme.textSecondary,
+                  size: 20,
+                ),
               ],
             ),
           ),
@@ -270,8 +268,10 @@ class _InputField extends StatelessWidget {
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: const TextStyle(color: AppTheme.textSecondary),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           border: InputBorder.none,
           suffixIcon: suffixIcon,
         ),
@@ -279,5 +279,3 @@ class _InputField extends StatelessWidget {
     );
   }
 }
-
-
