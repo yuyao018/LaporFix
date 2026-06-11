@@ -8,6 +8,7 @@ import '../../widgets/function_appbar.dart';
 import 'models/community_issue.dart';
 import 'services/community_repository.dart';
 import 'viewmodels/post_details_view_model.dart';
+import 'package:group2_urbanfix/features/status_tracker/summary/models/issue_completion_proof.dart';
 import 'widgets/comment_tile.dart';
 import 'widgets/image_carousel.dart';
 
@@ -282,7 +283,12 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                 ),
                 const SizedBox(height: 10),
 
-                if (comments.isEmpty)
+                // Completion proof card — pinned above comments when present
+                if (issue.completionProof != null &&
+                    issue.completionProof!.hasContent)
+                  _CompletionProofCard(proof: issue.completionProof!),
+
+                if (comments.isEmpty && (issue.completionProof == null || !issue.completionProof!.hasContent))
                   const Padding(
                     padding: EdgeInsets.only(top: 10),
                     child: Text(
@@ -290,6 +296,8 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                       style: TextStyle(color: Colors.white),
                     ),
                   )
+                else if (comments.isEmpty)
+                  const SizedBox.shrink()
                 else
                   for (final c in comments)
                     FutureBuilder(
@@ -362,4 +370,165 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
       ],
     );
   }
+}
+
+// ── Completion Proof Card ─────────────────────────────────────────────────────
+// Pinned at the top of the comments section when an admin has uploaded proof.
+class _CompletionProofCard extends StatelessWidget {
+  const _CompletionProofCard({required this.proof});
+
+  final IssueCompletionProof proof;
+
+  static const _green = Color(0xFF16A34A);
+  static const _greenLight = Color(0xFFDCFCE7);
+  static const _greenBorder = Color(0xFF86EFAC);
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    final dateText = proof.completedAt != null
+        ? DateFormat('d MMM yyyy').format(proof.completedAt!)
+        : '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: _greenLight,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _greenBorder, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: _green,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Issue Resolved',
+                    style: tt.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                if (dateText.isNotEmpty)
+                  Text(
+                    dateText,
+                    style: tt.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Proof images
+                if (proof.proofImages.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      height: 180,
+                      child: proof.proofImages.length == 1
+                          ? Image.network(
+                              proof.proofImages.first,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => _imagePlaceholder(),
+                            )
+                          : ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: proof.proofImages.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (_, i) => ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  proof.proofImages[i],
+                                  width: 200,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) =>
+                                      _imagePlaceholder(width: 200),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                // Description
+                if (proof.description.isNotEmpty)
+                  Text(
+                    proof.description,
+                    style: tt.bodySmall?.copyWith(
+                      color: AppTheme.textPrimary,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+
+                // Completed-by line
+                if (proof.completedBy.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.admin_panel_settings_rounded,
+                        size: 14,
+                        color: _green,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Resolved by Admin',
+                        style: tt.bodySmall?.copyWith(
+                          color: _green,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.push_pin_rounded,
+                        size: 13,
+                        color: _green,
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder({double? width}) => Container(
+        width: width,
+        color: const Color(0xFFE5E7EB),
+        child: const Center(
+          child: Icon(Icons.broken_image_outlined, color: Color(0xFF9CA3AF)),
+        ),
+      );
 }

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'community_comment.dart';
 import 'community_like.dart';
+import 'package:group2_urbanfix/features/status_tracker/summary/models/issue_completion_proof.dart';
 
 class CommunityIssueLocation {
   final String heading;
@@ -78,6 +79,7 @@ class CommunityIssue {
   final List<String> reportImages;
   final CommunityIssueLocation location;
   final CommunityData community;
+  final IssueCompletionProof? completionProof;
 
   const CommunityIssue({
     required this.id,
@@ -94,6 +96,7 @@ class CommunityIssue {
     required this.reportImages,
     required this.location,
     required this.community,
+    this.completionProof,
   });
 
   int get likesCount => community.likes.length;
@@ -158,6 +161,10 @@ class CommunityIssue {
       reportImages: reportImgs,
       location: CommunityIssueLocation.fromMap(locationMap),
       community: CommunityData.fromMap(communityMap),
+      completionProof: data['proofOfCompletion'] is Map
+          ? IssueCompletionProof.fromMap(
+              Map<String, dynamic>.from(data['proofOfCompletion'] as Map))
+          : null,
     );
   }
 
