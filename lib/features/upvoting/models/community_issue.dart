@@ -7,21 +7,14 @@ import 'package:group2_urbanfix/features/status_tracker/summary/models/issue_com
 class CommunityIssueLocation {
   final String heading;
   final String postcode;
-  final GeoPoint? preciseLocation; // real schema: precise_location
 
-  const CommunityIssueLocation({
-    required this.heading,
-    required this.postcode,
-    this.preciseLocation,
-  });
+  const CommunityIssueLocation({required this.heading, required this.postcode});
 
   factory CommunityIssueLocation.fromMap(Map<String, dynamic>? map) {
     final data = map ?? const <String, dynamic>{};
-    final geo = data['precise_location']; // <-- exact field name
     return CommunityIssueLocation(
       heading: (data['heading'] ?? '').toString(),
       postcode: (data['postcode'] ?? '').toString(),
-      preciseLocation: geo is GeoPoint ? geo : null,
     );
   }
 }
@@ -68,9 +61,6 @@ class CommunityIssue {
   final String status;
   final String reporterId;
 
-  final String publicReporterName;
-  final String reporterVisibility;
-
   final bool isDeleted;
 
   final DateTime? createdAt;
@@ -88,8 +78,6 @@ class CommunityIssue {
     required this.description,
     required this.status,
     required this.reporterId,
-    required this.publicReporterName,
-    required this.reporterVisibility,
     required this.isDeleted,
     required this.createdAt,
     required this.lastUpdatedAt,
@@ -111,12 +99,7 @@ class CommunityIssue {
 
   DateTime? get sortDate => createdAt ?? lastUpdatedAt;
 
-  String get reporterDisplayText {
-    final vis = reporterVisibility.trim().toLowerCase();
-    if (vis == 'anonymous') return 'Anonymous';
-    if (publicReporterName.trim().isNotEmpty) return publicReporterName.trim();
-    return 'Resident';
-  }
+  String get reporterDisplayText => 'Resident';
 
   String get searchableText => [
     title,
@@ -153,8 +136,6 @@ class CommunityIssue {
       description: (data['description'] ?? '').toString(),
       status: (data['status'] ?? '').toString(),
       reporterId: (data['reporterID'] ?? '').toString(),
-      publicReporterName: (data['publicReporterName'] ?? '').toString(),
-      reporterVisibility: (data['reporterVisibility'] ?? '').toString(),
       isDeleted: data['isDeleted'] == true,
       createdAt: _readDate(data['createdAt']),
       lastUpdatedAt: _readDate(data['lastUpdatedAt']),
@@ -163,7 +144,8 @@ class CommunityIssue {
       community: CommunityData.fromMap(communityMap),
       completionProof: data['proofOfCompletion'] is Map
           ? IssueCompletionProof.fromMap(
-              Map<String, dynamic>.from(data['proofOfCompletion'] as Map))
+              Map<String, dynamic>.from(data['proofOfCompletion'] as Map),
+            )
           : null,
     );
   }

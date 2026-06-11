@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../theme/app_theme.dart';
 import '../models/community_comment.dart';
+import '../utils/community_name_formatter.dart';
 
 class CommentTile extends StatelessWidget {
   const CommentTile({
@@ -13,6 +14,7 @@ class CommentTile extends StatelessWidget {
     this.photoUrl,
     this.overrideUserName,
     this.overrideArea,
+    this.maskUserName = false,
   });
 
   final CommunityComment comment;
@@ -28,6 +30,8 @@ class CommentTile extends StatelessWidget {
   /// From users.area
   final String? overrideArea;
 
+  final bool maskUserName;
+
   static const _unlikedGrey = Color(0xFF98A2B3);
 
   @override
@@ -38,9 +42,11 @@ class CommentTile extends StatelessWidget {
         ? ''
         : DateFormat('d MMM yyyy').format(comment.timestamp!);
 
-    final name = (overrideUserName ?? comment.userName).trim().isNotEmpty
-        ? (overrideUserName ?? comment.userName).trim()
-        : (comment.isAdmin ? 'Admin' : 'User');
+    final name = communityNameForDisplay(
+      overrideUserName ?? comment.userName,
+      maskName: maskUserName,
+      fallback: comment.isAdmin ? 'Admin' : 'User',
+    );
 
     final area = (overrideArea ?? comment.userLocation).trim();
 

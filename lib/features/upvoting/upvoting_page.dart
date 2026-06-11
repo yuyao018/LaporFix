@@ -117,12 +117,15 @@ class _UpvotingPageState extends State<UpvotingPage> {
                   profile?.displayName ?? issue.reporterDisplayText;
               final reporterArea = profile?.area ?? '';
               final reporterPhoto = profile?.photoURL;
+              final maskReporterName =
+                  profile?.profileVisibleToCommunity == true;
 
               return CommunityIssueCard(
                 issue: issue,
                 topRank: rank,
                 isLiked: isLiked,
                 reporterName: reporterName,
+                maskReporterName: maskReporterName,
                 reporterArea: reporterArea,
                 reporterPhotoUrl: reporterPhoto,
                 onTap: () => _openDetails(issue.id),

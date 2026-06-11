@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/app_settings_service.dart';
 import '../../../theme/app_theme.dart';
 import '../models/community_issue.dart';
+import '../utils/community_name_formatter.dart';
 
 class CommunityIssueCard extends StatelessWidget {
   const CommunityIssueCard({
@@ -11,6 +12,7 @@ class CommunityIssueCard extends StatelessWidget {
     required this.topRank,
     required this.isLiked,
     required this.reporterName,
+    required this.maskReporterName,
     required this.reporterArea,
     required this.reporterPhotoUrl,
     required this.onTap,
@@ -23,6 +25,8 @@ class CommunityIssueCard extends StatelessWidget {
 
   /// From users.username (fallback to issue.reporterDisplayText / "Resident")
   final String reporterName;
+
+  final bool maskReporterName;
 
   /// From users.area (fallback to empty -> "Location unavailable")
   final String reporterArea;
@@ -46,6 +50,10 @@ class CommunityIssueCard extends StatelessWidget {
     final photo = (reporterPhotoUrl ?? '').trim();
     final hasPhoto = photo.isNotEmpty;
     final area = reporterArea.trim();
+    final displayReporterName = communityNameForDisplay(
+      reporterName,
+      maskName: maskReporterName,
+    );
 
     return GestureDetector(
       onTap: onTap,
@@ -89,7 +97,9 @@ class CommunityIssueCard extends StatelessWidget {
                               return const ColoredBox(
                                 color: Color(0xFFE5E7EB),
                                 child: Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                               );
                             },
@@ -175,9 +185,7 @@ class CommunityIssueCard extends StatelessWidget {
                       Expanded(
                         flex: 4,
                         child: Text(
-                          reporterName.trim().isNotEmpty
-                              ? reporterName.trim()
-                              : 'Resident',
+                          displayReporterName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: tt.bodySmall?.copyWith(

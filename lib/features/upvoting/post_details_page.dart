@@ -6,7 +6,9 @@ import '../../theme/app_theme.dart';
 import '../../widgets/chatbox.dart';
 import '../../widgets/function_appbar.dart';
 import 'models/community_issue.dart';
+import 'models/community_user_profile.dart';
 import 'services/community_repository.dart';
+import 'utils/community_name_formatter.dart';
 import 'viewmodels/post_details_view_model.dart';
 import 'package:group2_urbanfix/features/status_tracker/summary/models/issue_completion_proof.dart';
 import 'widgets/comment_tile.dart';
@@ -71,16 +73,19 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
         final issue = issueSnap.data;
 
         // AppBar title requirement: reporter username
-        return FutureBuilder(
+        return FutureBuilder<CommunityUserProfile?>(
           future: issue == null
               ? Future.value(null)
               : _viewModel.profileFor(issue.reporterId),
           builder: (context, profileSnap) {
             final reporterProfile = profileSnap.data;
-            final title =
-                reporterProfile?.displayName ??
-                issue?.reporterDisplayText ??
-                'Resident';
+            final maskTitle =
+                issue != null &&
+                reporterProfile?.profileVisibleToCommunity == true;
+            final title = communityNameForDisplay(
+              reporterProfile?.displayName ?? issue?.reporterDisplayText,
+              maskName: maskTitle,
+            );
 
             return AnimatedBuilder(
               animation: _viewModel,
@@ -288,7 +293,9 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                     issue.completionProof!.hasContent)
                   _CompletionProofCard(proof: issue.completionProof!),
 
-                if (comments.isEmpty && (issue.completionProof == null || !issue.completionProof!.hasContent))
+                if (comments.isEmpty &&
+                    (issue.completionProof == null ||
+                        !issue.completionProof!.hasContent))
                   const Padding(
                     padding: EdgeInsets.only(top: 10),
                     child: Text(
@@ -304,11 +311,14 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                       future: _viewModel.profileFor(c.userId),
                       builder: (context, snap) {
                         final profile = snap.data;
+                        final maskUserName =
+                            profile?.profileVisibleToCommunity == true;
                         return CommentTile(
                           comment: c,
                           isLiked: uid.isNotEmpty && c.isLikedBy(uid),
                           photoUrl: profile?.photoURL,
                           overrideUserName: profile?.displayName,
+                          maskUserName: maskUserName,
                           overrideArea:
                               profile?.area, // REQUIREMENT: from users.area
                           onLikeTap: () async {
@@ -459,7 +469,7 @@ class _CompletionProofCard extends StatelessWidget {
                           : ListView.separated(
                               scrollDirection: Axis.horizontal,
                               itemCount: proof.proofImages.length,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (_, _) =>
                                   const SizedBox(width: 8),
                               itemBuilder: (_, i) => ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
@@ -525,10 +535,10 @@ class _CompletionProofCard extends StatelessWidget {
   }
 
   Widget _imagePlaceholder({double? width}) => Container(
-        width: width,
-        color: const Color(0xFFE5E7EB),
-        child: const Center(
-          child: Icon(Icons.broken_image_outlined, color: Color(0xFF9CA3AF)),
-        ),
-      );
+    width: width,
+    color: const Color(0xFFE5E7EB),
+    child: const Center(
+      child: Icon(Icons.broken_image_outlined, color: Color(0xFF9CA3AF)),
+    ),
+  );
 }

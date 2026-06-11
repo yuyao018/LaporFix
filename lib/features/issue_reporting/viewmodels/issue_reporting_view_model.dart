@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:group2_urbanfix/features/status_tracker/summary/data/status_tracker_repository.dart';
-import 'package:group2_urbanfix/services/app_settings_service.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/issue_report_model.dart';
 import '../services/image_service.dart';
@@ -166,7 +165,6 @@ class IssueReportingViewModel extends ChangeNotifier {
   // Submit issue report to Firebase Storage and Firestore
   Future<void> submitReport(BuildContext context) async {
     final NavigatorState navigator = Navigator.of(context);
-    final settings = AppSettingsService.instance;
     String postcode = '';
     String postcodeName = '';
 
@@ -222,8 +220,12 @@ class IssueReportingViewModel extends ChangeNotifier {
       }
 
       // STEP B: Save report data to Firestore 'issue' collection
-      final String currentUserId =
-          FirebaseAuth.instance.currentUser?.uid ?? 'anonymous_user';
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw StateError('Please sign in before submitting a report.');
+      }
+
+      final String currentUserId = currentUser.uid;
       final issueCategory = resolvedCategory;
       if (issueCategory.isEmpty) {
         throw StateError('Enter a category before submitting the report.');
@@ -238,10 +240,6 @@ class IssueReportingViewModel extends ChangeNotifier {
             ? descriptionController.text
             : report.description,
         'reporterID': currentUserId,
-        'reporterVisibility': settings.anonymousReportMode
-            ? 'anonymous'
-            : 'public',
-        'publicReporterName': settings.anonymousReportMode ? 'Anonymous' : null,
         // Initial report status
         'status': 'submitted',
 

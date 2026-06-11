@@ -132,7 +132,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                               icon: Icons.groups_rounded,
                               title: 'Community profile',
                               subtitle:
-                                  'Show your display name on public community activity.',
+                                  'Mask your display name on public community activity.',
                               value: _settings.profileVisibleToCommunity,
                               onChanged: (value) => _updateSetting(
                                 'profileVisibleToCommunity',
@@ -350,5 +350,3 @@ class _SwitchSettingTile extends StatelessWidget {
     );
   }
 }
-
-
