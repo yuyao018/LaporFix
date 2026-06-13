@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../theme/app_theme.dart';
 import '../../../summary/models/issue_status.dart';
+import '../../models/proof_attachment.dart';
 import '../../viewmodels/update_issue_view_model.dart';
 
 // form card for choosing the next issue status
@@ -353,8 +356,7 @@ class _ProofImagePanel extends StatelessWidget {
                                 viewModel.draft.proofAttachments[index];
 
                             return _ProofAttachmentTile(
-                              attachmentName: attachment.name,
-                              isVideo: attachment.type.name == 'video',
+                              attachment: attachment,
                               onRemove: () => onRemoveProof(index),
                             );
                           },
@@ -431,51 +433,35 @@ class _ProofPickerButton extends StatelessWidget {
 // selected proof file with remove action
 class _ProofAttachmentTile extends StatelessWidget {
   const _ProofAttachmentTile({
-    required this.attachmentName,
-    required this.isVideo,
+    required this.attachment,
     required this.onRemove,
   });
 
-  final String attachmentName;
-  final bool isVideo;
+  final ProofAttachment attachment;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
+    final isVideo = attachment.type == ProofAttachmentType.video;
+
     return SizedBox(
-      width: 96,
+      width: 118,
       child: Stack(
         children: [
           Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F2F5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFD0D5DD)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isVideo ? Icons.videocam_outlined : Icons.image_outlined,
-                      color: const Color(0xFF667085),
-                      size: 28,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      attachmentName,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.black87,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F2F5),
+                  border: Border.all(color: const Color(0xFFD0D5DD)),
                 ),
+                child: isVideo
+                    ? _SelectedVideoPreview(fileName: attachment.name)
+                    : _SelectedImagePreview(
+                        file: attachment.file,
+                        fileName: attachment.name,
+                      ),
               ),
             ),
           ),
@@ -492,6 +478,108 @@ class _ProofAttachmentTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SelectedImagePreview extends StatelessWidget {
+  const _SelectedImagePreview({required this.file, required this.fileName});
+
+  final File file;
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.file(
+          file,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Center(
+              child: Icon(
+                Icons.broken_image_outlined,
+                color: Color(0xFF667085),
+                size: 30,
+              ),
+            );
+          },
+        ),
+        _AttachmentNameOverlay(fileName: fileName),
+      ],
+    );
+  }
+}
+
+class _SelectedVideoPreview extends StatelessWidget {
+  const _SelectedVideoPreview({required this.fileName});
+
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const ColoredBox(color: Color(0xFF1F2937)),
+        Center(
+          child: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.play_arrow_rounded,
+              color: Color(0xFF1F2937),
+              size: 30,
+            ),
+          ),
+        ),
+        const Positioned(
+          left: 8,
+          top: 8,
+          child: Icon(Icons.videocam_outlined, color: Colors.white, size: 18),
+        ),
+        _AttachmentNameOverlay(fileName: fileName),
+      ],
+    );
+  }
+}
+
+class _AttachmentNameOverlay extends StatelessWidget {
+  const _AttachmentNameOverlay({required this.fileName});
+
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 10, 6, 5),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.72)],
+          ),
+        ),
+        child: Text(
+          fileName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

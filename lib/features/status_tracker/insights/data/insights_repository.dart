@@ -11,7 +11,8 @@ class InsightsRepository {
   final FirebaseFirestore _firestore;
   final String collectionPath;
 
-  // take from every active Firestore document
+  // Streams raw issue documents for system-wide insights; filtering and derived
+  // analytics are handled in the ViewModel.
   Stream<List<IssueSummary>> watchSystemIssues() {
     return _firestore.collection(collectionPath).snapshots().map((snapshot) {
       return snapshot.docs

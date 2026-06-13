@@ -186,8 +186,7 @@ class IssueProgressCard extends StatelessWidget {
   }
 }
 
-// row for average resolution and similar/support count
-// developing
+// row for derived benchmark stats shown under the progress card.
 class IssueMetricRow extends StatelessWidget {
   const IssueMetricRow({super.key, required this.viewModel});
 
@@ -217,7 +216,7 @@ class IssueMetricRow extends StatelessWidget {
   }
 }
 
-// bottom banner (resoluion status)
+// bottom banner showing whether the issue is resolved
 class IssueResolutionBanner extends StatelessWidget {
   const IssueResolutionBanner({super.key, required this.isResolved});
 

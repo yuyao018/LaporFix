@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// status values
+// Status values used for Firestore parsing, filters, and display styling.
 enum IssueStatus {
   all('All'),
   submitted('Submitted'),
@@ -20,6 +20,8 @@ enum IssueStatus {
   ];
 
   static IssueStatus fromText(String? value) {
+    // Firestore values may arrive as "inProgress", "in-progress", or
+    // "in progress"; normalize those shapes before matching.
     final normalized = (value ?? '')
         .trim()
         .toLowerCase()

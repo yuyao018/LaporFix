@@ -1,7 +1,28 @@
 import 'dart:io';
 
+enum ReportAttachmentType { image, video }
+
+class ReportAttachment {
+  const ReportAttachment({
+    required this.file,
+    required this.name,
+    required this.type,
+  });
+
+  final File file;
+  final String name;
+  final ReportAttachmentType type;
+
+  String get contentType {
+    return switch (type) {
+      ReportAttachmentType.image => 'image/jpeg',
+      ReportAttachmentType.video => 'video/mp4',
+    };
+  }
+}
+
 class IssueReportModel {
-  File? image;
+  List<ReportAttachment> attachments;
   String category;
   String description;
   double? latitude;
@@ -11,7 +32,7 @@ class IssueReportModel {
   String additionalNotes;
 
   IssueReportModel({
-    this.image,
+    this.attachments = const [],
     this.category = '',
     this.description = '',
     this.latitude,

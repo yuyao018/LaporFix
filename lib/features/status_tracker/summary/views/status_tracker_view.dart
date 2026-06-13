@@ -13,7 +13,7 @@ import 'components/issue_summary_card.dart';
 import 'components/status_tracker_empty_state.dart';
 import 'components/status_tracker_error_state.dart';
 
-// main view for all of the summary
+// Main view for the status-tracker summary list.
 class StatusTrackerView extends StatefulWidget {
   const StatusTrackerView({super.key, required this.repository});
 
@@ -75,7 +75,7 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
             onFilterChanged: _viewModel.updateStatusFilter,
           ),
           body: ColoredBox(color: AppTheme.mainBackground, child: _buildBody()),
-          // add new issue here
+          // Opens the report creation flow from the status-tracker summary.
           floatingActionButton: ButtonAddFab(
             onPressed: () {
               final route = MaterialPageRoute(
@@ -135,30 +135,31 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
             // Require a confirmation before the delete actually fires
             confirmDismiss: (_) async {
               return await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: const Text('Delete report?'),
-                  content: const Text(
-                    'This will permanently remove your report. This action cannot be undone.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Text('Delete'),
+                      title: const Text('Delete report?'),
+                      content: const Text(
+                        'This will permanently remove your report. This action cannot be undone.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                          child: const Text('Delete'),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ) ?? false;
+                  ) ??
+                  false;
             },
             onDismissed: (_) async {
               try {
@@ -167,7 +168,9 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Could not delete the report. Please try again.'),
+                      content: Text(
+                        'Could not delete the report. Please try again.',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -182,7 +185,11 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.delete_rounded, color: Colors.white, size: 28),
+              child: const Icon(
+                Icons.delete_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
             child: IssueSummaryCard(
               issue: issue,
@@ -195,7 +202,7 @@ class _StatusTrackerViewState extends State<StatusTrackerView> {
   }
 }
 
-// need to modify, KIV
+// Small footer showing how many non-deleted issues match the current filters.
 class _IssueCountCaption extends StatelessWidget {
   const _IssueCountCaption({required this.visibleCount});
 

@@ -11,7 +11,7 @@ const int _metricGridColumnCount = 3;
 const double _metricGridSpacing = 12;
 const double _compactMetricCardHeight = 76;
 
-// error view when Firestore cant provide insight data
+// Error view when Firestore cannot provide insight data.
 class InsightsErrorState extends StatelessWidget {
   const InsightsErrorState({
     super.key,

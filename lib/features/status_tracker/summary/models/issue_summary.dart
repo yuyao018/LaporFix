@@ -5,7 +5,7 @@ import 'issue_engagement.dart';
 import 'issue_location.dart';
 import 'issue_status.dart';
 
-// complete model for one issue document.
+// Complete model for one issue document.
 class IssueSummary {
   const IssueSummary({
     required this.id,
@@ -43,17 +43,23 @@ class IssueSummary {
   DateTime? get inProgressAt => _timelineDate(1);
   DateTime? get completedAt => _timelineDate(2) ?? completionProof.completedAt;
 
-  // get last updated date for UI
+  // Finds the latest known status-related date for sorting and display.
   DateTime? get latestStatusChangedAt {
-    final dates = [...statusChangedAt.whereType<DateTime>(), ?completionProof.completedAt, ?createdAt];
+    final dates = [
+      ...statusChangedAt.whereType<DateTime>(),
+      ?completionProof.completedAt,
+      ?createdAt,
+    ];
     if (dates.isEmpty) return null;
-    // compare
     dates.sort((left, right) => right.compareTo(left));
     return dates.first;
   }
 
-  factory IssueSummary.fromMap({required String id, required Map<String, dynamic> data}) {
-    // maps the Firebase document structure
+  factory IssueSummary.fromMap({
+    required String id,
+    required Map<String, dynamic> data,
+  }) {
+    // Maps the Firebase document structure into null-safe app models.
     final status = IssueStatus.fromText(data['status']?.toString());
     final proofOfCompletion = _readMap(data['proofOfCompletion']);
     final createdAt = _readDate(data['createdAt']);
@@ -80,9 +86,17 @@ class IssueSummary {
     );
   }
 
-  // sed by the ViewModel for simple search
-  String get searchableText =>
-      [title, category, description, reporterId, status.label, location.postcodeName, location.postcode, id].join(' ').toLowerCase();
+  // Used by the ViewModel for simple search.
+  String get searchableText => [
+    title,
+    category,
+    description,
+    reporterId,
+    status.label,
+    location.postcodeName,
+    location.postcode,
+    id,
+  ].join(' ').toLowerCase();
 
   DateTime? _timelineDate(int index) {
     if (index < 0 || index >= statusChangedAt.length) return null;
@@ -90,7 +104,7 @@ class IssueSummary {
   }
 
   static Map<String, dynamic>? _readMap(Object? value) {
-    // normalization nested maps to Map<String, dynamic> for easier reading
+    // Normalizes nested maps to Map<String, dynamic> for easier reading.
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
     return null;
@@ -104,13 +118,21 @@ class IssueSummary {
     return null;
   }
 
-  static List<DateTime?> _readStatusChangedAt(Object? value, {DateTime? fallbackSubmittedAt, DateTime? fallbackCompletedAt}) {
+  static List<DateTime?> _readStatusChangedAt(
+    Object? value, {
+    DateTime? fallbackSubmittedAt,
+    DateTime? fallbackCompletedAt,
+  }) {
     // always return exactly three slots so view models can safely read by index
     final dates = List<DateTime?>.filled(3, null);
 
     if (value is Iterable) {
       final items = value.toList(growable: false);
-      for (var index = 0; index < dates.length && index < items.length; index++) {
+      for (
+        var index = 0;
+        index < dates.length && index < items.length;
+        index++
+      ) {
         dates[index] = _readDate(items[index]);
       }
     }
@@ -128,7 +150,10 @@ class IssueSummary {
 
   static List<String> _readStringList(Object? value) {
     if (value is Iterable) {
-      return value.map((item) => item.toString().trim()).where((item) => item.isNotEmpty).toList(growable: false);
+      return value
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
     }
 
     final text = value?.toString().trim();
