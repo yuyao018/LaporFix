@@ -248,260 +248,316 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        color: Colors.white,
+        decoration: const BoxDecoration(
+          gradient: AppTheme.functionBackground,
+        ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Title & Caption input ──
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFD1D5DB)),
-                  borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.all(20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                child: Column(
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Title & Caption input ──
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _titleController,
+                        style: tt.titleLarge?.copyWith(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter your title',
+                          hintStyle: tt.titleLarge?.copyWith(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textSecondary,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const Divider(height: 24, color: Color(0xFFE5E7EB)),
+                      TextField(
+                        controller: _captionController,
+                        style: tt.bodyMedium?.copyWith(fontSize: 16),
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your captions..',
+                          hintStyle: tt.bodyMedium?.copyWith(
+                            fontSize: 16,
+                            color: AppTheme.textSecondary,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // ── Attach section ──
+                Row(
                   children: [
-                    TextField(
-                      controller: _titleController,
-                      style: tt.titleLarge,
-                      decoration: InputDecoration(
-                        hintText: 'Enter your title',
-                        hintStyle: tt.titleLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                        border: InputBorder.none,
+                    Text(
+                      'Attach',
+                      style: tt.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
                       ),
                     ),
-                    const Divider(height: 1),
-                    TextField(
-                      controller: _captionController,
-                      style: tt.bodyLarge?.copyWith(fontSize: 16),
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        hintText: 'Enter your captions..',
-                        hintStyle: tt.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                        border: InputBorder.none,
-                      ),
-                    ),
+                    const SizedBox(width: 6),
+                    const Text('🔗', style: TextStyle(fontSize: 16)),
                   ],
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // ── Attach section ──
-              Row(
-                children: [
-                  Text('Attach', style: tt.titleLarge?.copyWith(fontSize: 16)),
-                  const SizedBox(width: 4),
-                  const Text('📎', style: TextStyle(fontSize: 16)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _ChipOption(label: 'Image', onTap: _pickImage),
-                  const SizedBox(width: 8),
-                  _ChipOption(label: 'Document', onTap: _pickDocument),
-                  const SizedBox(width: 8),
-                  _ChipOption(label: 'Video', onTap: _pickVideo),
-                ],
-              ),
-
-              // ── Attachment previews ──
-              if (_attachments.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                ..._attachments.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final a = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          a.type == AttachmentType.image
-                              ? Icons.image
-                              : a.type == AttachmentType.video
-                              ? Icons.videocam
-                              : Icons.description,
-                          color: AppTheme.primaryBlue,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            a.name,
-                            style: tt.bodySmall,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => _removeAttachment(i),
-                          child: const Icon(
-                            Icons.close,
-                            size: 18,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-              const SizedBox(height: 24),
+                Row(
+                  children: [
+                    _ChipOption(label: 'Image', onTap: _pickImage),
+                    const SizedBox(width: 12),
+                    _ChipOption(label: 'Document', onTap: _pickDocument),
+                    const SizedBox(width: 12),
+                    _ChipOption(label: 'Video', onTap: _pickVideo),
+                  ],
+                ),
 
-              // ── Mention / Audience section ──
-              Row(
-                children: [
-                  Text('Mention', style: tt.titleLarge?.copyWith(fontSize: 16)),
-                  const SizedBox(width: 4),
-                  const Text('💬', style: TextStyle(fontSize: 16)),
+                // ── Attachment previews ──
+                if (_attachments.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ..._attachments.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final a = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            a.type == AttachmentType.image
+                                ? Icons.image
+                                : a.type == AttachmentType.video
+                                ? Icons.videocam
+                                : Icons.description,
+                            color: AppTheme.primaryBlue,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              a.name,
+                              style: tt.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => _removeAttachment(i),
+                            child: const Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
                 ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: _audienceOptions.map((option) {
-                  final value = option.toLowerCase();
-                  final isSelected = _selectedAudience == value;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
+                const SizedBox(height: 24),
+
+                // ── Mention / Audience section ──
+                Row(
+                  children: [
+                    Text(
+                      'Mention',
+                      style: tt.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text('💬', style: TextStyle(fontSize: 16)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  children: _audienceOptions.map((option) {
+                    final value = option.toLowerCase();
+                    final isSelected = _selectedAudience == value;
+                    return GestureDetector(
                       onTap: () => setState(() => _selectedAudience = value),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                          horizontal: 20,
+                          vertical: 10,
                         ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppTheme.primaryBlue
-                              : AppTheme.surfaceGrey,
+                              : const Color(0xFFE5E7EB),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppTheme.primaryBlue
-                                : const Color(0xFFD1D5DB),
-                          ),
                         ),
                         child: Text(
                           option,
                           style: TextStyle(
                             fontSize: 14,
+                            fontWeight: FontWeight.w600,
                             color: isSelected
                                 ? Colors.white
                                 : AppTheme.textPrimary,
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // ── Location picker ──
+                Row(
+                  children: [
+                    Text(
+                      'Location',
+                      style: tt.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 24),
-
-              // ── Location picker ──
-              Row(
-                children: [
-                  Text(
-                    'Location',
-                    style: tt.titleLarge?.copyWith(fontSize: 16),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text('📌', style: TextStyle(fontSize: 16)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _showLocationPicker,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFD1D5DB)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _selectedLocation.isEmpty
-                              ? 'Select location'
-                              : _selectedLocation,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: _selectedLocation.isEmpty
-                                ? AppTheme.textSecondary
-                                : AppTheme.textPrimary,
+                    const SizedBox(width: 6),
+                    const Text('📍', style: TextStyle(fontSize: 16)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: _showLocationPicker,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _selectedLocation.isEmpty
+                                ? 'Select location'
+                                : _selectedLocation,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: _selectedLocation.isEmpty
+                                  ? AppTheme.textSecondary
+                                  : AppTheme.textPrimary,
+                            ),
                           ),
                         ),
-                      ),
-                      const Icon(Icons.keyboard_arrow_down),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // ── Colour dropdown ──
-              Row(
-                children: [
-                  Text('Colour', style: tt.titleLarge?.copyWith(fontSize: 16)),
-                  const SizedBox(width: 4),
-                  const Text('💡', style: TextStyle(fontSize: 16)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFD1D5DB)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedColour,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down),
-                    items: _colourOptions.map((c) {
-                      return DropdownMenuItem(
-                        value: c,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: _getColourPreview(c),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(c[0].toUpperCase() + c.substring(1)),
-                          ],
+                        const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: AppTheme.textSecondary,
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _selectedColour = val);
-                    },
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
-              // ── Submit button ──
-              _isSubmitting
-                  ? const Center(child: CircularProgressIndicator())
-                  : PrimaryButton(label: 'Submit', onPressed: _submitPost),
-              const SizedBox(height: 24),
-            ],
+                // ── Colour dropdown ──
+                Row(
+                  children: [
+                    Text(
+                      'Colour',
+                      style: tt.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text('💡', style: TextStyle(fontSize: 16)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedColour,
+                      isExpanded: true,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppTheme.textSecondary,
+                      ),
+                      items: _colourOptions.map((c) {
+                        return DropdownMenuItem(
+                          value: c,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: _getColourPreview(c),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                c[0].toUpperCase() + c.substring(1),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedColour = val);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // ── Submit button ──
+                _isSubmitting
+                    ? const Center(child: CircularProgressIndicator())
+                    : PrimaryButton(label: 'Submit', onPressed: _submitPost),
+              ],
+            ),
           ),
         ),
       ),
@@ -542,18 +598,17 @@ class _ChipOption extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceGrey,
+          color: const Color(0xFFE5E7EB),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFD1D5DB)),
         ),
         child: Text(
           label,
           style: const TextStyle(
             fontSize: 14,
             color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
