@@ -44,10 +44,17 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
     }
 
     if (viewModel.addressController.text.isEmpty) {
+      // Try to get user's location, fallback to Malaysia center
       viewModel.getCurrentLocation().then((_) {
         if (mounted) {
           _mapController.move(viewModel.currentPosition, 15.0);
           setState(() {}); // Refresh UI to synchronize map and marker position
+        }
+      }).catchError((error) {
+        // If location services fail, show Malaysia center at lower zoom
+        if (mounted) {
+          _mapController.move(viewModel.currentPosition, 7.0); // Zoom to show Malaysia
+          setState(() {});
         }
       });
     }
@@ -119,6 +126,15 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                             options: MapOptions(
                               initialCenter: viewModel.currentPosition,
                               initialZoom: 15.0,
+                              minZoom: 6.0, // Prevent zooming out too far from Malaysia
+                              maxZoom: 18.0,
+                              // Restrict map bounds to Malaysia region
+                              cameraConstraint: CameraConstraint.contain(
+                                bounds: LatLngBounds(
+                                  const LatLng(0.5, 99.0), // Southwest corner
+                                  const LatLng(7.5, 120.0), // Northeast corner
+                                ),
+                              ),
                               interactionOptions: InteractionOptions(
                                 flags: _isFormVisible
                                     ? InteractiveFlag.none

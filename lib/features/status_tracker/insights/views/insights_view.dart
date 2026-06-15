@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/function_appbar.dart';
+import '../../../upvoting/post_details_page.dart';
 import '../models/insights_models.dart';
 import '../viewmodels/insights_view_model.dart';
 import 'components/insights_widgets.dart';
@@ -160,7 +161,13 @@ class _OverviewContent extends StatelessWidget {
           child: InsightsTopEngagementList(
             items: visibleEngagements,
             showCategory: true,
-            onItemTap: (_) {},
+            onItemTap: (item) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PostDetailsPage(issueId: item.issueId),
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -234,7 +241,13 @@ class _CategoryContent extends StatelessWidget {
           child: InsightsTopEngagementList(
             items: visibleEngagements,
             showCategory: false,
-            onItemTap: (_) {},
+            onItemTap: (item) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PostDetailsPage(issueId: item.issueId),
+                ),
+              );
+            },
           ),
         ),
       ],

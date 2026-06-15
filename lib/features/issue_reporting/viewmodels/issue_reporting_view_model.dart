@@ -45,7 +45,8 @@ class IssueReportingViewModel extends ChangeNotifier {
   Timer? _draftSaveTimer;
 
   // MAP State (OpenStreetMap uses latlong2 LatLng)
-  LatLng currentPosition = const LatLng(5.3630, 100.4667);
+  // Default to Kuala Lumpur, Malaysia (central location)
+  LatLng currentPosition = const LatLng(3.1390, 101.6869);
 
   // Category List
   final List<String> categories = [
@@ -592,8 +593,18 @@ class IssueReportingViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Restrict search to Malaysia with countrycodes and viewbox
+      // Viewbox coordinates: West Malaysia bounds (approximate)
+      // Format: left,top,right,bottom (longitude_min, latitude_max, longitude_max, latitude_min)
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=5&addressdetails=1',
+        'https://nominatim.openstreetmap.org/search?'
+        'q=${Uri.encodeComponent(query)}&'
+        'format=json&'
+        'limit=5&'
+        'addressdetails=1&'
+        'countrycodes=my&'
+        'viewbox=99.0,7.5,120.0,0.5&'
+        'bounded=1',
       );
 
       final response = await http
