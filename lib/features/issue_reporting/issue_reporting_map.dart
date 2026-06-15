@@ -233,9 +233,9 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                       );
                                     },
                                     decoration: InputDecoration(
-                                      hintText: 'Enter location here...',
+                                      hintText: 'Search street name or area (e.g., Jalan Sungai Pinang)',
                                       hintStyle: const TextStyle(
-                                        fontSize: 15,
+                                        fontSize: 14,
                                         color: Colors.grey,
                                       ),
                                       prefixIcon: const Icon(
@@ -445,6 +445,14 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                         color: Colors.black,
                                       ),
                                     ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Add unit/building number, floor, etc.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
                                     const SizedBox(height: 6),
                                     TextField(
                                       controller:
@@ -475,7 +483,7 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                       },
                                       onChanged: viewModel.updateAddressDetails,
                                       decoration: InputDecoration(
-                                        hintText: 'e.g., Block A, Unit 12',
+                                        hintText: 'e.g., 208D, Ground Floor',
                                         hintStyle: const TextStyle(
                                           fontSize: 14,
                                           color: Colors.grey,
