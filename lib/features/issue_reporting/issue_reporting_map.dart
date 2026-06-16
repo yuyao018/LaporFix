@@ -44,10 +44,17 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
     }
 
     if (viewModel.addressController.text.isEmpty) {
+      // Try to get user's location, fallback to Malaysia center
       viewModel.getCurrentLocation().then((_) {
         if (mounted) {
           _mapController.move(viewModel.currentPosition, 15.0);
           setState(() {}); // Refresh UI to synchronize map and marker position
+        }
+      }).catchError((error) {
+        // If location services fail, show Malaysia center at lower zoom
+        if (mounted) {
+          _mapController.move(viewModel.currentPosition, 7.0); // Zoom to show Malaysia
+          setState(() {});
         }
       });
     }
@@ -119,6 +126,15 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                             options: MapOptions(
                               initialCenter: viewModel.currentPosition,
                               initialZoom: 15.0,
+                              minZoom: 6.0, // Prevent zooming out too far from Malaysia
+                              maxZoom: 18.0,
+                              // Restrict map bounds to Malaysia region
+                              cameraConstraint: CameraConstraint.contain(
+                                bounds: LatLngBounds(
+                                  const LatLng(0.5, 99.0), // Southwest corner
+                                  const LatLng(7.5, 120.0), // Northeast corner
+                                ),
+                              ),
                               interactionOptions: InteractionOptions(
                                 flags: _isFormVisible
                                     ? InteractiveFlag.none
@@ -233,9 +249,9 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                       );
                                     },
                                     decoration: InputDecoration(
-                                      hintText: 'Enter location here...',
+                                      hintText: 'Search street name or area (e.g., Jalan Sungai Pinang)',
                                       hintStyle: const TextStyle(
-                                        fontSize: 15,
+                                        fontSize: 14,
                                         color: Colors.grey,
                                       ),
                                       prefixIcon: const Icon(
@@ -445,6 +461,14 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                         color: Colors.black,
                                       ),
                                     ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Add unit/building number, floor, etc.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
                                     const SizedBox(height: 6),
                                     TextField(
                                       controller:
@@ -475,7 +499,7 @@ class _IssueReportingMapState extends State<IssueReportingMap> {
                                       },
                                       onChanged: viewModel.updateAddressDetails,
                                       decoration: InputDecoration(
-                                        hintText: 'e.g., Block A, Unit 12',
+                                        hintText: 'e.g., 208D, Ground Floor',
                                         hintStyle: const TextStyle(
                                           fontSize: 14,
                                           color: Colors.grey,

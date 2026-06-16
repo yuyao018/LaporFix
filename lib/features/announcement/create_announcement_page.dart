@@ -671,7 +671,9 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
         '&countrycodes=my'
         '&format=json'
         '&addressdetails=1'
-        '&limit=10',
+        '&limit=10'
+        '&viewbox=99.0,7.5,120.0,0.5'
+        '&bounded=1',
       );
 
       final response = await http.get(
