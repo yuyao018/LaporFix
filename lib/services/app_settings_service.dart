@@ -128,4 +128,25 @@ class AppSettingsService extends ChangeNotifier {
   Future<void> _deleteDeprecatedSettings(DocumentReference<Map<String, dynamic>> userRef) {
     return userRef.update({for (final key in deprecatedSettingKeys) 'appSettings.$key': FieldValue.delete()});
   }
+
+  Future<bool> shouldShowAppTour() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    final data = doc.data();
+    if (data == null) return true;
+    final appSettings = data['appSettings'];
+    if (appSettings is Map && appSettings['showAppTour'] == false) {
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> completeAppTour() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _firestore.collection('users').doc(user.uid).set({
+      'appSettings': {'showAppTour': false},
+    }, SetOptions(merge: true));
+  }
 }

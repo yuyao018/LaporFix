@@ -16,6 +16,7 @@ import 'features/AI_chatbot/chatbot_page.dart';
 import 'features/AI_chatbot/view_models/chat_view_model.dart';
 import 'services/app_settings_service.dart';
 import 'services/fcm_service.dart';
+import 'widgets/app_tour.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,11 +68,37 @@ class RootNavigation extends StatefulWidget {
 class _RootNavigationState extends State<RootNavigation> {
   int _selectedIndex = 0;
 
+  final GlobalKey _homeTabKey = GlobalKey();
+  final GlobalKey _issueTabKey = GlobalKey();
+  final GlobalKey _communityTabKey = GlobalKey();
+  final GlobalKey _profileTabKey = GlobalKey();
+  final GlobalKey _chatbotFabKey = GlobalKey();
+
   // Tab mapping:
   // 0 — Home      => AnnouncementPage
   // 1 — Issue     => StatusTrackerPage
   // 2 — Community => UpvotingPage
   // 3 — Profile   => ProfilePage
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndShowTour());
+  }
+
+  Future<void> _checkAndShowTour() async {
+    final shouldShow = await AppSettingsService.instance.shouldShowAppTour();
+    if (shouldShow && mounted) {
+      AppTour.start(
+        context: context,
+        homeKey: _homeTabKey,
+        issueKey: _issueTabKey,
+        communityKey: _communityTabKey,
+        profileKey: _profileTabKey,
+        chatbotKey: _chatbotFabKey,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,10 +118,12 @@ class _RootNavigationState extends State<RootNavigation> {
           : BottomNavBar(
               currentIndex: _selectedIndex,
               onTap: (index) => setState(() => _selectedIndex = index),
+              itemKeys: [_homeTabKey, _issueTabKey, _communityTabKey, _profileTabKey],
             ),
       floatingActionButton: _selectedIndex == 3
           ? null
           : ChatbotFab(
+              key: _chatbotFabKey,
               onPressed: () {
                 Navigator.push(
                   context,
