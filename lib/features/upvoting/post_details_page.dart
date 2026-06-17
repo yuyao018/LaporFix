@@ -101,7 +101,7 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                     child: SafeArea(
                       top: false,
                       bottom: false,
-                      child: _buildBody(issueSnap, reporterProfile?.area ?? ''),
+                      child: _buildBody(issueSnap),
                     ),
                   ),
                 );
@@ -115,7 +115,6 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
 
   Widget _buildBody(
     AsyncSnapshot<CommunityIssue> snapshot,
-    String reporterArea,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
       return const Center(
@@ -139,10 +138,8 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
         ? ''
         : DateFormat('d MMM yyyy').format(issue.createdAt!);
 
-    // REQUIREMENT: post location should be area like Bayan Lepas / Ayer Itam
-    final displayArea = reporterArea.trim().isNotEmpty
-        ? reporterArea.trim()
-        : '';
+    // Use report location instead of user's home address
+    final reportLocation = issue.location.heading.trim();
 
     final comments = _viewModel.sortComments(issue.community.comments);
 
@@ -203,8 +200,8 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              displayArea.isNotEmpty
-                                  ? displayArea
+                              reportLocation.isNotEmpty
+                                  ? reportLocation
                                   : 'Location unavailable',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

@@ -149,6 +149,19 @@ class CommunityViewModel extends ChangeNotifier {
       return bd.compareTo(ad);
     }
 
+    int sortByCompletionDate(CommunityIssue a, CommunityIssue b) {
+      // Sort by completion date (most recently completed first)
+      final ad = a.completionProof?.completedAt ?? 
+                 a.lastUpdatedAt ?? 
+                 a.createdAt ?? 
+                 DateTime.fromMillisecondsSinceEpoch(0);
+      final bd = b.completionProof?.completedAt ?? 
+                 b.lastUpdatedAt ?? 
+                 b.createdAt ?? 
+                 DateTime.fromMillisecondsSinceEpoch(0);
+      return bd.compareTo(ad);
+    }
+
     int sortByMostSupported(CommunityIssue a, CommunityIssue b) {
       final cmp = b.likesCount.compareTo(a.likesCount);
       if (cmp != 0) return cmp;
@@ -165,8 +178,8 @@ class CommunityViewModel extends ChangeNotifier {
         return filtered;
 
       case CommunitySort.complete:
-        // completed issues sorted newest first
-        filtered.sort(sortByNewest);
+        // Completed issues sorted by completion date (most recent first)
+        filtered.sort(sortByCompletionDate);
         return filtered;
 
       case CommunitySort.all:
