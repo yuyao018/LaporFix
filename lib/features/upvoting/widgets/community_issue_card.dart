@@ -13,7 +13,6 @@ class CommunityIssueCard extends StatelessWidget {
     required this.isLiked,
     required this.reporterName,
     required this.maskReporterName,
-    required this.reporterArea,
     required this.reporterPhotoUrl,
     required this.onTap,
     required this.onLikeTap,
@@ -27,9 +26,6 @@ class CommunityIssueCard extends StatelessWidget {
   final String reporterName;
 
   final bool maskReporterName;
-
-  /// From users.area (fallback to empty -> "Location unavailable")
-  final String reporterArea;
 
   /// From users.photoURL (nullable)
   final String? reporterPhotoUrl;
@@ -49,7 +45,10 @@ class CommunityIssueCard extends StatelessWidget {
         : issue.reportImages.first;
     final photo = (reporterPhotoUrl ?? '').trim();
     final hasPhoto = photo.isNotEmpty;
-    final area = reporterArea.trim();
+    
+    // Use report location instead of user's home address
+    final reportLocation = issue.location.heading.trim();
+    
     final displayReporterName = communityNameForDisplay(
       reporterName,
       maskName: maskReporterName,
@@ -196,7 +195,7 @@ class CommunityIssueCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
 
-                      // location icon + AREA only
+                      // location icon + report location
                       const Icon(
                         Icons.location_on_outlined,
                         size: 16,
@@ -206,7 +205,7 @@ class CommunityIssueCard extends StatelessWidget {
                       Expanded(
                         flex: 5,
                         child: Text(
-                          area.isNotEmpty ? area : 'Location unavailable',
+                          reportLocation.isNotEmpty ? reportLocation : 'Location unavailable',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: tt.bodySmall?.copyWith(
