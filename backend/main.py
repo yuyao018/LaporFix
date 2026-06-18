@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 from ingest import get_embeddings, get_or_load_vector_store
 from rag_chain import build_rag_chain, messages_from_history, SYSTEM_INSTRUCTION
+from response_cache import ResponseCache
 from firestore_service import (
     init_firestore,
     save_turn,
@@ -48,6 +49,7 @@ sessions: dict[str, list[dict]] = {}
 
 vector_store = None
 rag_chain = None
+response_cache = None
 
 MAX_EXTRACTED_CHARS = 6000
 
@@ -86,12 +88,27 @@ async def _extract_uploaded_text(file_bytes: bytes, filename: str) -> str:
 # ── App lifespan ───────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global vector_store, rag_chain
+    global vector_store, rag_chain, response_cache
     print("🚀  Starting LaporFix RAG backend...")
     try:
         embeddings = get_embeddings()
         vector_store = get_or_load_vector_store(embeddings)
-        rag_chain = build_rag_chain(vector_store)
+        
+        # Initialize response cache with the same ChromaDB client
+        try:
+            import chromadb
+            from chromadb.config import Settings as ChromaSettings
+            chroma_client = chromadb.PersistentClient(
+                path="./chroma_db",
+                settings=ChromaSettings(anonymized_telemetry=False)
+            )
+            response_cache = ResponseCache(embeddings, chroma_client)
+            print(f"✅  Response cache initialized with {response_cache.collection.count() if response_cache.collection else 0} cached responses")
+        except Exception as cache_err:
+            logger.warning(f"Failed to initialize response cache: {cache_err}")
+            response_cache = None
+        
+        rag_chain = build_rag_chain(vector_store, response_cache)
         init_firestore()
         print("✅  Backend ready.")
     except Exception as e:
@@ -155,7 +172,18 @@ class SaveTurnResponse(BaseModel):
 # ── Routes ─────────────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
-    return {"status": "ok", "sessions_active": len(sessions)}
+    cache_stats = {}
+    if response_cache:
+        try:
+            cache_stats = response_cache.get_stats()
+        except Exception as e:
+            logger.warning(f"Could not get cache stats: {e}")
+    
+    return {
+        "status": "ok",
+        "sessions_active": len(sessions),
+        "cache_stats": cache_stats,
+    }
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -179,6 +207,7 @@ async def chat(req: ChatRequest):
         answer = rag_chain.invoke({
             "question": req.message,
             "chat_history": history,
+            "session_id": session_id,
         })
     except Exception as e:
         logger.error("RAG chain error:\n%s", traceback.format_exc())
@@ -375,6 +404,43 @@ async def clear_all_sessions(req: ClearAllRequest):
         "message": f"Cleared {len(deleted_ids)} session(s).",
         "deleted_count": len(deleted_ids),
     }
+
+
+@app.get("/cache/stats")
+async def get_cache_stats():
+    """Get response cache performance statistics."""
+    if not response_cache:
+        raise HTTPException(
+            status_code=503,
+            detail="Response cache is not initialized"
+        )
+    
+    try:
+        stats = response_cache.get_stats()
+        return stats
+    except Exception as e:
+        logger.error("Cache stats error: %s", traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/cache/clear")
+async def clear_response_cache():
+    """Clear all cached responses (admin endpoint)."""
+    if not response_cache:
+        raise HTTPException(
+            status_code=503,
+            detail="Response cache is not initialized"
+        )
+    
+    try:
+        success = response_cache.clear()
+        if success:
+            return {"message": "Response cache cleared successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to clear cache")
+    except Exception as e:
+        logger.error("Cache clear error: %s", traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/chat/sessions/{user_id}")
