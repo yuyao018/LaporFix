@@ -7,15 +7,108 @@ import 'package:group2_urbanfix/features/status_tracker/summary/models/issue_com
 class CommunityIssueLocation {
   final String heading;
   final String postcode;
+  final String area;
+  final String state;
+  final String displayName;
 
-  const CommunityIssueLocation({required this.heading, required this.postcode});
+  const CommunityIssueLocation({
+    required this.heading,
+    required this.postcode,
+    this.area = '',
+    this.state = '',
+    this.displayName = '',
+  });
 
   factory CommunityIssueLocation.fromMap(Map<String, dynamic>? map) {
     final data = map ?? const <String, dynamic>{};
     return CommunityIssueLocation(
       heading: (data['heading'] ?? '').toString(),
       postcode: (data['postcode'] ?? '').toString(),
+      area: (data['area'] ?? '').toString(),
+      state: (data['state'] ?? '').toString(),
+      displayName: (data['displayName'] ?? '').toString(),
     );
+  }
+
+  /// Get formatted location with area and state for display
+  String get formattedLocation {
+    final parts = <String>[];
+    
+    // If we have area and state explicitly stored, use them
+    if (area.isNotEmpty && state.isNotEmpty) {
+      if (heading.isNotEmpty) parts.add(heading);
+      parts.add(area);
+      parts.add(state);
+      return parts.join(', ');
+    } 
+    
+    // Otherwise try to parse from displayName if available
+    if (displayName.isNotEmpty) {
+      final segments = displayName
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      
+      // For Malaysian addresses, typically:
+      // Street, Area/City, Postcode Area, State, Country
+      // Or: Street, Area, State
+      if (segments.length >= 3) {
+        // Take first segment (street/heading)
+        parts.add(segments[0]);
+        
+        // Try to find state (usually contains state names like Kuala Lumpur, Selangor, etc.)
+        // Look backwards for the state (typically near the end, before country if present)
+        for (int i = segments.length - 1; i >= 1; i--) {
+          final seg = segments[i].toLowerCase();
+          // Skip if it looks like a country or postcode
+          if (seg.contains('malaysia') || 
+              RegExp(r'^\d{5}$').hasMatch(seg)) {
+            continue;
+          }
+          // Common Malaysian states
+          if (_isMalaysianState(seg)) {
+            // Add the segment before state as area (if exists and not postcode)
+            if (i > 1 && !RegExp(r'^\d').hasMatch(segments[i - 1])) {
+              parts.add(segments[i - 1]);
+            }
+            parts.add(segments[i]);
+            break;
+          }
+        }
+        
+        // If we only got the street, add at least one more segment
+        if (parts.length == 1 && segments.length > 1) {
+          parts.add(segments[1]);
+          if (segments.length > 2) {
+            parts.add(segments[segments.length - 1]);
+          }
+        }
+        
+        return parts.join(', ');
+      } else if (segments.length == 2) {
+        // Simple format: just return both parts
+        return displayName;
+      }
+    }
+    
+    // Fall back to heading only
+    if (heading.isNotEmpty) {
+      return heading;
+    }
+    
+    return 'Location unavailable';
+  }
+  
+  /// Check if a segment is a Malaysian state name
+  bool _isMalaysianState(String segment) {
+    final states = [
+      'johor', 'kedah', 'kelantan', 'melaka', 'malacca',
+      'negeri sembilan', 'pahang', 'penang', 'pulau pinang',
+      'perak', 'perlis', 'sabah', 'sarawak', 'selangor',
+      'terengganu', 'kuala lumpur', 'labuan', 'putrajaya',
+    ];
+    return states.any((state) => segment.contains(state));
   }
 }
 

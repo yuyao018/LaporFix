@@ -46,8 +46,8 @@ class CommunityIssueCard extends StatelessWidget {
     final photo = (reporterPhotoUrl ?? '').trim();
     final hasPhoto = photo.isNotEmpty;
     
-    // Use report location instead of user's home address
-    final reportLocation = issue.location.heading.trim();
+    // Use formatted location (includes area and state)
+    final reportLocation = issue.location.formattedLocation;
     
     final displayReporterName = communityNameForDisplay(
       reporterName,
@@ -167,57 +167,62 @@ class CommunityIssueCard extends StatelessWidget {
 
                   Row(
                     children: [
-                      // avatar + name
-                      CircleAvatar(
-                        radius: 10,
-                        backgroundColor: AppTheme.surfaceGrey,
-                        backgroundImage: hasPhoto ? NetworkImage(photo) : null,
-                        child: hasPhoto
-                            ? null
-                            : const Icon(
-                                Icons.person_rounded,
-                                size: 14,
-                                color: AppTheme.textSecondary,
+                      // Left side: avatar + name + location
+                      Expanded(
+                        child: Row(
+                          children: [
+                            // avatar + name
+                            CircleAvatar(
+                              radius: 10,
+                              backgroundColor: AppTheme.surfaceGrey,
+                              backgroundImage: hasPhoto ? NetworkImage(photo) : null,
+                              child: hasPhoto
+                                  ? null
+                                  : const Icon(
+                                      Icons.person_rounded,
+                                      size: 14,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                displayReporterName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: tt.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        flex: 4,
-                        child: Text(
-                          displayReporterName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: tt.bodySmall?.copyWith(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
+                            ),
+                            const SizedBox(width: 10),
 
-                      // location icon + report location
-                      const Icon(
-                        Icons.location_on_outlined,
-                        size: 16,
-                        color: Color(0xFFEF4444),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        flex: 5,
-                        child: Text(
-                          reportLocation.isNotEmpty ? reportLocation : 'Location unavailable',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: tt.bodySmall?.copyWith(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                          ),
+                            // location icon + report location
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 16,
+                              color: Color(0xFFEF4444),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                reportLocation.isNotEmpty ? reportLocation : 'Location unavailable',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: tt.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
                       const SizedBox(width: 10),
 
-                      // like button
+                      // Right side: like button (always at the right end)
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: onLikeTap,

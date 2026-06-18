@@ -138,8 +138,8 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
         ? ''
         : DateFormat('d MMM yyyy').format(issue.createdAt!);
 
-    // Use report location instead of user's home address
-    final reportLocation = issue.location.heading.trim();
+    // Use formatted location (includes area and state)
+    final reportLocation = issue.location.formattedLocation;
 
     final comments = _viewModel.sortComments(issue.community.comments);
 
