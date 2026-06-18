@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 class BottomNavBar extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final List<GlobalKey<State<StatefulWidget>>>? itemKeys;
 
   const BottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.itemKeys,
   });
 
   @override
@@ -134,6 +136,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
                             return Expanded(
                               child: _BottomNavButton(
+                                key: widget.itemKeys != null && index < widget.itemKeys!.length
+                                    ? widget.itemKeys![index]
+                                    : null,
                                 item: item,
                                 isActive: isActive,
                                 activeColor: _activeColor,
@@ -164,6 +169,7 @@ class _BottomNavButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _BottomNavButton({
+    super.key,
     required this.item,
     required this.isActive,
     required this.activeColor,

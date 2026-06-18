@@ -4,8 +4,8 @@ import '../../summary/models/issue_summary.dart';
 import '../viewmodels/update_issue_view_model.dart';
 import 'update_issue_view.dart';
 
-// reates/disposes the ViewModel once
-// child views can rebuild freely without losing form state or selected proof files
+// Creates and disposes the ViewModel once.
+// Child views can rebuild freely without losing form state or selected proof files.
 class UpdateIssuePage extends StatefulWidget {
   const UpdateIssuePage({super.key, required this.issue});
 

@@ -1,5 +1,9 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import 'package:group2_urbanfix/features/issue_reporting/models/issue_report_model.dart';
 import 'package:group2_urbanfix/features/issue_reporting/viewmodels/issue_reporting_view_model.dart';
 
 import 'package:group2_urbanfix/theme/app_theme.dart';
@@ -36,6 +40,55 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
     super.dispose();
   }
 
+  Future<void> _pickImage(BuildContext context) async {
+    await _pickProof(
+      context,
+      pick: () => ImagePicker().pickImage(source: ImageSource.gallery),
+      type: ReportAttachmentType.image,
+      errorPrefix: 'Image pick error',
+    );
+  }
+
+  Future<void> _pickVideo(BuildContext context) async {
+    await _pickProof(
+      context,
+      pick: () => ImagePicker().pickVideo(source: ImageSource.gallery),
+      type: ReportAttachmentType.video,
+      errorPrefix: 'Video pick error',
+    );
+  }
+
+  Future<void> _pickProof(
+    BuildContext context, {
+    required Future<XFile?> Function() pick,
+    required ReportAttachmentType type,
+    required String errorPrefix,
+  }) async {
+    if (!viewModel.canAddProof) {
+      // gives immediate feedback before opening another picker
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You can upload up to 5 report files.')),
+      );
+      return;
+    }
+
+    try {
+      final file = await pick();
+      if (file == null || !context.mounted) return;
+
+      // local file reference is stored here before submit
+      viewModel.addProofAttachment(
+        ReportAttachment(file: File(file.path), name: file.name, type: type),
+      );
+      if (mounted) setState(() {});
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$errorPrefix: $error')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isOtherSelected = viewModel.isOtherCategorySelected;
@@ -68,176 +121,15 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Photo Uploader
-                              GestureDetector(
-                                onTap: () async {
-                                  if (viewModel.report.image == null) {
-                                    await viewModel.pickImage();
-
-                                    setState(() {});
-                                  }
+                              _ReportProofPanel(
+                                viewModel: viewModel,
+                                onAddImage: () => _pickImage(context),
+                                onAddVideo: () => _pickVideo(context),
+                                onRemoveProof: (index) {
+                                  setState(() {
+                                    viewModel.removeProofAttachment(index);
+                                  });
                                 },
-
-                                child: Container(
-                                  height: 200,
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE0E4E7),
-
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-
-                                  child: viewModel.report.image == null
-                                      ? Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-
-                                          children: [
-                                            SizedBox(
-                                              width: 100,
-                                              height: 80,
-                                              child: FittedBox(
-                                                fit: BoxFit.fill,
-                                                child: const Icon(
-                                                  Icons.camera_alt_outlined,
-                                                  color: Color(0xFF8B8E93),
-                                                ),
-                                              ),
-                                            ),
-
-                                            const SizedBox(height: 12),
-
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 8,
-                                                    horizontal: 50,
-                                                  ),
-
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.accentBlue,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-
-                                              child: Text(
-                                                'Add Photo',
-                                                style: AppTheme
-                                                    .appTextTheme
-                                                    .labelLarge
-                                                    ?.copyWith(
-                                                      fontSize: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      : Stack(
-                                          children: [
-                                            // Display selected image
-                                            Positioned.fill(
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(16),
-                                                child: Image.file(
-                                                  viewModel.report.image!,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            ),
-
-                                            // Delete image button (top-right corner)
-                                            Positioned(
-                                              top: 12,
-                                              right: 12,
-                                              child: GestureDetector(
-                                                onTap: () {
-                                                  setState(() {
-                                                    viewModel.report.image =
-                                                        null;
-                                                  });
-                                                },
-
-                                                child: Container(
-                                                  padding: const EdgeInsets.all(
-                                                    6,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.black
-                                                        .withValues(alpha: 0.6),
-
-                                                    shape: BoxShape.circle,
-                                                  ),
-
-                                                  child: const Icon(
-                                                    Icons.close,
-                                                    color: Colors.white,
-                                                    size: 18,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-
-                                            // Edit image button
-                                            Positioned(
-                                              bottom: 31,
-                                              left: 0,
-                                              right: 0,
-                                              child: Align(
-                                                alignment: Alignment.center,
-                                                child: GestureDetector(
-                                                  onTap: () async {
-                                                    await viewModel.pickImage();
-
-                                                    setState(() {});
-                                                  },
-
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          vertical: 8,
-                                                          horizontal: 50,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          AppTheme.accentBlue,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black
-                                                              .withValues(
-                                                                alpha: 0.2,
-                                                              ),
-                                                          blurRadius: 6,
-                                                          offset: const Offset(
-                                                            0,
-                                                            2,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-
-                                                    child: Text(
-                                                      'Edit Photo',
-                                                      style: AppTheme
-                                                          .appTextTheme
-                                                          .labelLarge
-                                                          ?.copyWith(
-                                                            fontSize: 16,
-                                                            color: Colors.white,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                ),
                               ),
 
                               const SizedBox(height: 20),
@@ -444,7 +336,7 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                       ).showSnackBar(
                                         const SnackBar(
                                           content: Text(
-                                            'Please upload a photo, select a category, and add a description. If you choose Other, enter the category name.',
+                                            'Please upload an image or video, select a category, and add a description. If you choose Other, enter the category name.',
                                           ),
 
                                           backgroundColor: Colors.redAccent,
@@ -474,7 +366,8 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                                     }
 
                                     if (!mounted) return;
-                                    navigator.pop(); // Always close loading dialog
+                                    navigator
+                                        .pop(); // Always close loading dialog
                                     navigator.push(
                                       MaterialPageRoute(
                                         builder: (_) => IssueReportingMap(
@@ -504,6 +397,277 @@ class _IssueReportingPageState extends State<IssueReportingPage> {
                 ),
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReportProofPanel extends StatelessWidget {
+  const _ReportProofPanel({
+    required this.viewModel,
+    required this.onAddImage,
+    required this.onAddVideo,
+    required this.onRemoveProof,
+  });
+
+  final IssueReportingViewModel viewModel;
+  final VoidCallback onAddImage;
+  final VoidCallback onAddVideo;
+  final ValueChanged<int> onRemoveProof;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: AspectRatio(
+        aspectRatio: 1.55,
+        child: ColoredBox(
+          color: const Color(0xFFDDE2E8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                Expanded(
+                  child: viewModel.report.attachments.isEmpty
+                      ? const Center(
+                          child: Icon(
+                            Icons.photo_camera_outlined,
+                            color: Color(0xFF8F9398),
+                            size: 58,
+                          ),
+                        )
+                      : ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: viewModel.report.attachments.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final attachment =
+                                viewModel.report.attachments[index];
+
+                            return _ProofAttachmentTile(
+                              attachment: attachment,
+                              onRemove: () => onRemoveProof(index),
+                            );
+                          },
+                        ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ProofPickerButton(
+                        label: 'Add Image',
+                        icon: Icons.image_outlined,
+                        onPressed: viewModel.canAddProof ? onAddImage : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ProofPickerButton(
+                        label: 'Add Video',
+                        icon: Icons.videocam_outlined,
+                        onPressed: viewModel.canAddProof ? onAddVideo : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${viewModel.report.attachments.length}/5 report files selected',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProofPickerButton extends StatelessWidget {
+  const _ProofPickerButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 16),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF315DFF),
+          disabledBackgroundColor: const Color(0xFF9CA3AF),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+          textStyle: const TextStyle(fontSize: 12),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProofAttachmentTile extends StatelessWidget {
+  const _ProofAttachmentTile({
+    required this.attachment,
+    required this.onRemove,
+  });
+
+  final ReportAttachment attachment;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final isVideo = attachment.type == ReportAttachmentType.video;
+
+    return SizedBox(
+      width: 118,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F2F5),
+                  border: Border.all(color: const Color(0xFFD0D5DD)),
+                ),
+                child: isVideo
+                    ? _SelectedVideoPreview(fileName: attachment.name)
+                    : _SelectedImagePreview(
+                        file: attachment.file,
+                        fileName: attachment.name,
+                      ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 2,
+            top: 2,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: const CircleAvatar(
+                radius: 10,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.close, color: Colors.red, size: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectedImagePreview extends StatelessWidget {
+  const _SelectedImagePreview({required this.file, required this.fileName});
+
+  final File file;
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.file(
+          file,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Center(
+              child: Icon(
+                Icons.broken_image_outlined,
+                color: Color(0xFF667085),
+                size: 30,
+              ),
+            );
+          },
+        ),
+        _AttachmentNameOverlay(fileName: fileName),
+      ],
+    );
+  }
+}
+
+class _SelectedVideoPreview extends StatelessWidget {
+  const _SelectedVideoPreview({required this.fileName});
+
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const ColoredBox(color: Color(0xFF1F2937)),
+        Center(
+          child: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.play_arrow_rounded,
+              color: Color(0xFF1F2937),
+              size: 30,
+            ),
+          ),
+        ),
+        const Positioned(
+          left: 8,
+          top: 8,
+          child: Icon(Icons.videocam_outlined, color: Colors.white, size: 18),
+        ),
+        _AttachmentNameOverlay(fileName: fileName),
+      ],
+    );
+  }
+}
+
+class _AttachmentNameOverlay extends StatelessWidget {
+  const _AttachmentNameOverlay({required this.fileName});
+
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 10, 6, 5),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.72)],
+          ),
+        ),
+        child: Text(
+          fileName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

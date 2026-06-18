@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:group2_urbanfix/features/status_tracker/summary/data/status_tracker_repository.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/issue_report_model.dart';
-import '../services/image_service.dart';
 import '../services/location_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -23,7 +21,6 @@ class IssueReportingViewModel extends ChangeNotifier {
   IssueReportModel report = IssueReportModel();
 
   // Services
-  final ImageService _imageService = ImageService();
   final LocationService _locationService = LocationService();
   LocationService get locationService => _locationService;
 
@@ -60,14 +57,21 @@ class IssueReportingViewModel extends ChangeNotifier {
     'Other',
   ];
 
-  // Select an image from the device gallery
-  Future<void> pickImage() async {
-    File? image = await _imageService.pickFromGallery();
+  bool get canAddProof => report.attachments.length < 5 && !isSubmittingReport;
 
-    if (image != null) {
-      report.image = image;
-      notifyListeners();
-    }
+  void addProofAttachment(ReportAttachment attachment) {
+    if (!canAddProof) return;
+
+    report.attachments = [...report.attachments, attachment];
+    notifyListeners();
+  }
+
+  void removeProofAttachment(int index) {
+    if (index < 0 || index >= report.attachments.length) return;
+
+    final attachments = [...report.attachments]..removeAt(index);
+    report.attachments = attachments;
+    notifyListeners();
   }
 
   // Retrieve the user's current location and update the map marker
@@ -153,7 +157,7 @@ class IssueReportingViewModel extends ChangeNotifier {
 
   // Validate image, category, and description fields
   bool validateStepOne() {
-    return report.image != null &&
+    return report.attachments.isNotEmpty &&
         resolvedCategory.isNotEmpty &&
         report.description.isNotEmpty;
   }
@@ -200,27 +204,6 @@ class IssueReportingViewModel extends ChangeNotifier {
       isSubmittingReport = true;
       notifyListeners();
 
-      // STEP A: Upload image to Firebase Storage
-      String imageUrl = '';
-      if (report.image != null) {
-        final storageRef = FirebaseStorage.instance.ref().child(
-          'issue_images/${DateTime.now().millisecondsSinceEpoch}.jpg',
-        );
-
-        UploadTask uploadTask = storageRef.putFile(report.image!);
-        TaskSnapshot snapshot = await uploadTask.timeout(
-          const Duration(seconds: 60),
-          onTimeout: () {
-            uploadTask.cancel();
-            throw Exception(
-              'Image upload timed out. Please check your internet connection and try again.',
-            );
-          },
-        );
-        imageUrl = await snapshot.ref.getDownloadURL();
-      }
-
-      // STEP B: Save report data to Firestore 'issue' collection
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw StateError('Please sign in before submitting a report.');
@@ -233,7 +216,16 @@ class IssueReportingViewModel extends ChangeNotifier {
       }
 
       // Save report into the required 'issue' collection！
-      await _firestore.collection('issue').add({
+      final issueRef = _firestore.collection('issue').doc();
+
+      // STEP A: Upload selected image/video files to Firebase Storage.
+      final reportUrls = await _uploadReportAttachments(
+        issueId: issueRef.id,
+        attachments: report.attachments,
+      );
+
+      // STEP B: Save report data to Firestore 'issue' collection
+      await issueRef.set({
         // Basic report information
         'title': issueCategory,
         'category': issueCategory,
@@ -263,7 +255,7 @@ class IssueReportingViewModel extends ChangeNotifier {
         },
 
         // Uploaded image URLs
-        'reportImg': imageUrl.isNotEmpty ? [imageUrl] : [],
+        'reportImg': reportUrls,
 
         // Metadata and timestamp information
         'isDeleted': false,
@@ -403,6 +395,33 @@ class IssueReportingViewModel extends ChangeNotifier {
       isSubmittingReport = false;
       notifyListeners();
     }
+  }
+
+  Future<List<String>> _uploadReportAttachments({
+    required String issueId,
+    required List<ReportAttachment> attachments,
+  }) async {
+    final uploadedUrls = <String>[];
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    // include timestamp and index in storage path
+    // avoid collisions if two proof share same original file
+    for (var index = 0; index < attachments.length; index++) {
+      final attachment = attachments[index];
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('issue_images')
+          .child(issueId)
+          .child('${timestamp}_${index}_${attachment.name}');
+
+      await ref.putFile(
+        attachment.file,
+        SettableMetadata(contentType: attachment.contentType),
+      );
+      uploadedUrls.add(await ref.getDownloadURL());
+    }
+
+    return uploadedUrls;
   }
 
   // Reset
