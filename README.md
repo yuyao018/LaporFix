@@ -48,6 +48,7 @@ A Flutter-based civic app for Malaysian residents to report, track, and engage w
 - **Issue status updates** — toggle FCM notifications when your report changes status
 - **Community profile** — show/hide display name on public activity
 - **Low data mode** — reduces media loading; auto-activates on mobile data
+- **Submit feedback or complaint** — form to report app issues, dissatisfaction with report resolutions, or suggestions; saved to Firestore `feedback` collection
 - Settings sync in real-time to Firestore via `AppSettingsService`
 
 ### LAPI — AI Chatbot
@@ -86,7 +87,7 @@ LaporFix/
 │   │   ├── status_tracker/           # Issue list, detail, update, insights (MVVM)
 │   │   ├── issue_reporting/          # Two-step report flow + OSM map
 │   │   ├── upvoting/                 # Community feed, post detail, vote insights
-│   │   ├── Profile/                  # Profile page, app settings
+│   │   ├── Profile/                  # Profile page, app settings, feedback form
 │   │   └── AI_chatbot/               # LAPI chatbot UI, view model, services, models
 │   ├── services/
 │   │   ├── fcm_service.dart          # FCM token management + notification routing
@@ -159,6 +160,7 @@ firebase deploy --only functions
 | `announcements/{id}` | title, caption, colour, target `{audience, location}`, attachments, fcmSent, isDeleted |
 | `chat_sessions/{session_id}` | user_id, created_at, updated_at, preview |
 | `chat_sessions/{id}/messages/{msg_id}` | role, content, timestamp, image_url, disruption_notice, ticket |
+| `feedback/{id}` | userId, userEmail, type, subject, details, createdAt, status |
 
 ---
 
