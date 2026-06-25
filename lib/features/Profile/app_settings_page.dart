@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/app_settings_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/function_appbar.dart';
+import 'feedback_page.dart';
 
 class AppSettingsPage extends StatefulWidget {
   final VoidCallback? onBack;
@@ -155,6 +156,23 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                               value: _settings.lowDataMode,
                               onChanged: (value) =>
                                   _updateSetting('lowDataMode', value),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _SettingsSection(
+                          title: 'Help & feedback',
+                          icon: Icons.help_outline_rounded,
+                          children: [
+                            _FeedbackTile(
+                              icon: Icons.feedback_rounded,
+                              title: 'Submit feedback or complaint',
+                              subtitle: 'Let us know if you have issues or suggestions.',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const FeedbackPage()),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -347,6 +365,41 @@ class _SwitchSettingTile extends StatelessWidget {
       activeThumbColor: AppTheme.primaryBlue,
       activeTrackColor: AppTheme.primaryBlue.withValues(alpha: 0.28),
       onChanged: onChanged,
+    );
+  }
+}
+
+class _FeedbackTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _FeedbackTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: AppTheme.textSecondary, size: 24),
+      title: Text(
+        title,
+        style: tt.bodyLarge?.copyWith(
+          color: AppTheme.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(subtitle, style: tt.bodySmall?.copyWith(fontSize: 13)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary),
+      onTap: onTap,
     );
   }
 }
