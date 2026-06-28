@@ -261,7 +261,7 @@ def build_vector_store(embeddings: OllamaEmbeddings, *, skip_web: bool = False) 
     print(f"\n📄  Local docs : {len(local_docs)} file(s)")
     print(f"🌐  Web pages  : {len(web_docs)} page(s)")
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
     chunks = splitter.split_documents(docs)
     print(f"✅  Total chunks: {len(chunks)} — embedding now...")
 

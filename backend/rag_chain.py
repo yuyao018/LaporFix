@@ -37,16 +37,13 @@ _DOCS_DIR = Path(__file__).resolve().parent / "docs"
 CHAT_MODEL = "qwen2.5:3b"
 OLLAMA_BASE_URL = "http://localhost:11434/v1"
 
-SYSTEM_INSTRUCTION = """You are LAPI, a helpful AI assistant for the LaporFix urban issue-reporting app.
-You help citizens of Malaysia report and track urban infrastructure issues such as potholes,
-water cuts, power outages, drainage problems, and other public complaints.
+SYSTEM_INSTRUCTION = """You are LAPI, the AI assistant for the LaporFix app for Malaysian citizens.
 
-Use the retrieved context provided to answer questions.
-If the context does not contain enough information, answer based on your general knowledge
-but make it clear you are doing so.
-
-LENGTH RULE: Keep every reply under 60 words — use at most 3 short, complete sentences.
-Never cut off mid-sentence. No bullet lists, no filler, no repetition. Be direct and friendly."""
+CRITICAL RULES:
+1. ONLY use information from the "Context from knowledge base" to answer.
+2. If the context does not answer the question, say: "I don't have information about that. Please check the LaporFix app or ask another question."
+3. NEVER invent or guess information not in the context.
+4. Keep replies under 60 words, using only short complete sentences. No bullet points. Be friendly."""
 
 def _get_client() -> OpenAI:
     # Ollama doesn't require a real API key, but the openai SDK requires a non-empty string
@@ -137,7 +134,7 @@ class RagChain:
                 return cached['response']
 
         # Step 3: Cache miss - retrieve relevant docs from knowledge base
-        docs = self._vector_store.similarity_search(standalone_question, k=4)
+        docs = self._vector_store.similarity_search(standalone_question, k=6)
         context = _format_docs(docs)
 
         # Ensure /clear chat history answers use the dedicated doc (avoids "clear photo" matches)
