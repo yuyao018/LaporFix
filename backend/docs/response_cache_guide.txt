@@ -1,0 +1,118 @@
+LAPORFIX RESPONSE CACHE GUIDE
+==============================
+
+What is Response Caching?
+-------------------------
+Response caching stores successful AI answers so when users ask the same or similar
+questions, we can return the cached answer instantly instead of calling the LLM again.
+
+This is like having a "memory" of previously answered questions that gets smarter over time.
+
+
+How It Works (User Perspective)
+-------------------------------
+1. First time asking "How do I report a pothole?"
+   → System generates answer using AI (takes 2-3 seconds)
+   → Answer is cached for future use
+
+2. Someone else asks "How do I report a pothole?"
+   → System finds cached answer (takes 0.1 seconds)
+   → Returns the same answer instantly
+
+3. Someone asks "How can I report potholes?" (slightly different)
+   → System recognizes it's similar (92%+ similarity)
+   → Returns the cached answer instantly
+
+
+Benefits
+--------
+✓ FASTER RESPONSES: 20-50x faster for common questions
+✓ LOWER COSTS: No API tokens used for cached answers
+✓ CONSISTENT ANSWERS: Same question = same answer
+✓ BETTER USER EXPERIENCE: Instant replies for FAQs
+
+
+What Gets Cached?
+-----------------
+✓ Standalone questions (no chat history)
+✓ Answers longer than 20 characters
+✓ Successfully generated responses
+
+✗ Follow-up questions (need context from chat history)
+✗ Error messages or incomplete responses
+✗ Answers over the cache size limit (1000 responses)
+
+
+Cache Configuration
+-------------------
+Similarity Threshold: 0.92 (92% similarity required)
+- Higher = more strict, fewer cache hits
+- Lower = more lenient, more cache hits (risk of wrong matches)
+
+Maximum Cache Size: 1000 responses
+- Prevents unlimited growth
+- When full, stops caching new responses (until LRU eviction is implemented)
+
+
+Monitoring Cache Performance
+----------------------------
+Check health endpoint:
+  GET /health
+
+Returns:
+{
+  "status": "ok",
+  "sessions_active": 3,
+  "cache_stats": {
+    "cache_size": 47,          ← How many responses are cached
+    "cache_hits": 12,          ← How many times cache was used
+    "cache_misses": 35,        ← How many times LLM was called
+    "hit_rate_percent": 25.53  ← Percentage of queries served from cache
+  }
+}
+
+
+Cache Management Endpoints
+--------------------------
+1. Get detailed cache statistics:
+   GET /cache/stats
+
+2. Clear all cached responses (admin only):
+   POST /cache/clear
+
+
+Common Questions
+----------------
+Q: Will caching give wrong answers?
+A: Very unlikely. The 0.92 similarity threshold means only nearly identical
+   questions match. False positives are rare.
+
+Q: When does the cache reset?
+A: Never, unless manually cleared. Cache persists across server restarts.
+
+Q: Why is my hit rate low?
+A: Hit rate increases over time as more questions are cached. New systems
+   start at 0% and improve as the cache builds up.
+
+Q: Does cache use a lot of storage?
+A: No. 1000 cached responses = ~3MB. Very minimal.
+
+
+Troubleshooting
+---------------
+Problem: Cache not working
+Solution: Check logs for "Response cache initialized" message
+
+Problem: Low hit rate
+Solution: Normal for new systems. Wait for cache to build over time.
+
+Problem: Cache giving wrong answers
+Solution: Clear cache with POST /cache/clear and report the issue
+
+
+For Developers
+--------------
+Cache implementation: backend/response_cache.py
+RAG integration: backend/rag_chain.py
+API endpoints: backend/main.py
+Full documentation: backend/CACHE_ARCHITECTURE.md
