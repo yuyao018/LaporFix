@@ -1421,8 +1421,9 @@ class _VerticalBarChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     const left = 24.0;
     const top = 8.0;
-    const right = 8.0;
-    const bottom = 30.0;
+    const right = 18.0;
+    const bottom = 50.0;
+    const labelAngle = -math.pi / 4;
     final chart = Rect.fromLTRB(
       left,
       top,
@@ -1437,6 +1438,10 @@ class _VerticalBarChartPainter extends CustomPainter {
       ..color = Colors.black
       ..strokeWidth = 1;
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
+    final axisLabelPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    );
 
     canvas.drawLine(chart.bottomLeft, chart.topLeft, axisPaint);
     canvas.drawLine(chart.bottomLeft, chart.bottomRight, axisPaint);
@@ -1466,12 +1471,17 @@ class _VerticalBarChartPainter extends CustomPainter {
         Offset(x + barWidth / 2 - textPainter.width / 2, rect.top - 16),
       );
 
-      textPainter.text = TextSpan(text: item.category, style: textStyle);
-      textPainter.layout(maxWidth: barSpace);
-      textPainter.paint(
-        canvas,
-        Offset(x + barWidth / 2 - textPainter.width / 2, chart.bottom + 7),
-      );
+      axisLabelPainter.text = TextSpan(text: item.category, style: textStyle);
+      axisLabelPainter.layout();
+
+      final labelX = x + barWidth / 2;
+      final labelY = chart.bottom + 8;
+      canvas
+        ..save()
+        ..translate(labelX, labelY)
+        ..rotate(labelAngle);
+      axisLabelPainter.paint(canvas, Offset(-axisLabelPainter.width, 0));
+      canvas.restore();
     }
   }
 
