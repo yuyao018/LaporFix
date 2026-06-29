@@ -46,6 +46,29 @@ class AnnouncementViewModel extends ChangeNotifier {
   /// Filter announcements based on user location and search query
   List<Announcement> filterAnnouncements(List<Announcement> announcements) {
     return announcements.where((announcement) {
+      // Admin sees all announcements
+      if (isAdmin) {
+        // If searching, apply search filter for admin too
+        if (_searchQuery.isNotEmpty) {
+          final query = _searchQuery.toLowerCase();
+          final title = announcement.title.toLowerCase();
+          final caption = announcement.caption.toLowerCase();
+          final location = announcement.target.location;
+          final locationStr =
+              '${location.area} ${location.city} ${location.state} ${location.full}'
+                  .toLowerCase();
+
+          return title.contains(query) ||
+              caption.contains(query) ||
+              locationStr.contains(query);
+        }
+        return true; // Admin sees all when not searching
+      }
+
+      // Filter by audience first for non-admin users
+      final audience = announcement.target.audience;
+      if (audience == 'admin') return false; // Non-admin can't see admin-only
+
       // If searching, filter by search query
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -108,6 +131,14 @@ class AnnouncementViewModel extends ChangeNotifier {
 
   /// Get display location based on search or user profile
   String getDisplayLocation(List<Announcement> filteredAnnouncements) {
+    // Admin sees all locations
+    if (isAdmin) {
+      if (_searchQuery.isNotEmpty && filteredAnnouncements.isNotEmpty) {
+        return filteredAnnouncements.first.target.location.shortDisplay;
+      }
+      return 'All Locations';
+    }
+
     // If searching and has results, show location from first result
     if (_searchQuery.isNotEmpty && filteredAnnouncements.isNotEmpty) {
       return filteredAnnouncements.first.target.location.shortDisplay;

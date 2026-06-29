@@ -225,7 +225,13 @@ class ChatViewModel extends ChangeNotifier {
       const disruptionKeywords = [
         'water', 'air', 'bekalan air', 'power', 'electric', 'elektrik',
         'tenaga', 'tnb', 'outage', 'blackout', 'disruption', 'gangguan',
-        'cut', 'putus', 'bekalan elektrik',
+        'cut', 'putus', 'bekalan elektrik', 'paip', 'pipe', 'syabas',
+      ];
+
+      const roadKeywordsToExclude = [
+        'road', 'jalan', 'highway', 'lebuhraya', 'traffic', 'lalu lintas',
+        'construction', 'kerja', 'pothole', 'resurfacing', 'lubang',
+        'mbpj', 'dbkl', 'clean-up', 'cleanup', 'gotong royong',
       ];
 
       final area = userArea.toLowerCase();
@@ -267,7 +273,12 @@ class ChatViewModel extends ChangeNotifier {
         final title = (data['title'] ?? '').toString().toLowerCase();
         final caption = (data['caption'] ?? '').toString().toLowerCase();
         final combined = '$title $caption';
-        if (disruptionKeywords.any((kw) => combined.contains(kw))) {
+        
+        // Check if it has disruption keywords AND NOT road keywords
+        final hasDisruptionKeywords = disruptionKeywords.any((kw) => combined.contains(kw));
+        final hasRoadKeywords = roadKeywordsToExclude.any((kw) => combined.contains(kw));
+        
+        if (hasDisruptionKeywords && !hasRoadKeywords) {
           matches.add(data);
         }
       }
@@ -355,6 +366,13 @@ class ChatViewModel extends ChangeNotifier {
         'road', 'jalan', 'highway', 'lebuhraya', 'traffic', 'lalu lintas',
         'construction', 'kerja', 'pothole', 'resurfacing', 'lubang',
         'mbpj', 'dbkl', 'maintenance', 'penyelenggaraan',
+        'clean-up', 'cleanup', 'gotong royong',
+      ];
+
+      const disruptionKeywordsToExclude = [
+        'water', 'air', 'bekalan air', 'power', 'electric', 'elektrik',
+        'tenaga', 'tnb', 'outage', 'blackout', 'disruption', 'gangguan',
+        'cut', 'putus', 'bekalan elektrik', 'paip', 'pipe', 'syabas',
       ];
 
       final state = userState.toLowerCase();
@@ -388,7 +406,12 @@ class ChatViewModel extends ChangeNotifier {
         final title = (data['title'] ?? '').toString().toLowerCase();
         final caption = (data['caption'] ?? '').toString().toLowerCase();
         final combined = '$title $caption';
-        if (roadKeywords.any((kw) => combined.contains(kw))) {
+        
+        // Check if it has road keywords AND NOT disruption keywords
+        final hasRoadKeywords = roadKeywords.any((kw) => combined.contains(kw));
+        final hasDisruptionKeywords = disruptionKeywordsToExclude.any((kw) => combined.contains(kw));
+        
+        if (hasRoadKeywords && !hasDisruptionKeywords) {
           matches.add(data);
         }
       }

@@ -23,7 +23,11 @@ class DisruptionNotice {
     final combined =
         '${data['title'] ?? ''} ${data['caption'] ?? ''}'.toLowerCase();
 
-    if (_roadKeywords.any((kw) => combined.contains(kw))) {
+    // First check for road keywords — more specific community events
+    if (_roadKeywords.any((kw) => combined.contains(kw)) ||
+        combined.contains('clean-up') ||
+        combined.contains('cleanup') ||
+        combined.contains('gotong royong')) {
       return DisruptionType.road;
     }
     if (_powerKeywords.any((kw) => combined.contains(kw))) {
@@ -36,7 +40,7 @@ class DisruptionNotice {
         combined.contains('penyelenggaraan')) {
       return DisruptionType.road;
     }
-    return DisruptionType.water;
+    return DisruptionType.road;
   }
 
   static bool isDisruptionAnnouncement(Map<String, dynamic> data) {
@@ -169,5 +173,8 @@ class DisruptionNotice {
     'lubang',
     'mbpj',
     'dbkl',
+    'clean-up',
+    'cleanup',
+    'gotong royong',
   ];
 }
