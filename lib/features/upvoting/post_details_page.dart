@@ -203,8 +203,6 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
                               reportLocation.isNotEmpty
                                   ? reportLocation
                                   : 'Location unavailable',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(
                                 context,
                               ).textTheme.bodySmall?.copyWith(fontSize: 12),
@@ -457,25 +455,38 @@ class _CompletionProofCard extends StatelessWidget {
                     child: SizedBox(
                       height: 180,
                       child: proof.proofImages.length == 1
-                          ? Image.network(
-                              proof.proofImages.first,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => _imagePlaceholder(),
+                          ? GestureDetector(
+                              onTap: () => _showImageGallery(
+                                context,
+                                proof.proofImages,
+                              ),
+                              child: Image.network(
+                                proof.proofImages.first,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) =>
+                                    _imagePlaceholder(),
+                              ),
                             )
                           : ListView.separated(
                               scrollDirection: Axis.horizontal,
                               itemCount: proof.proofImages.length,
                               separatorBuilder: (_, _) =>
                                   const SizedBox(width: 8),
-                              itemBuilder: (_, i) => ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  proof.proofImages[i],
-                                  width: 200,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) =>
-                                      _imagePlaceholder(width: 200),
+                              itemBuilder: (_, i) => GestureDetector(
+                                onTap: () => _showImageGallery(
+                                  context,
+                                  proof.proofImages,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    proof.proofImages[i],
+                                    width: 200,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) =>
+                                        _imagePlaceholder(width: 200),
+                                  ),
                                 ),
                               ),
                             ),
@@ -538,4 +549,149 @@ class _CompletionProofCard extends StatelessWidget {
       child: Icon(Icons.broken_image_outlined, color: Color(0xFF9CA3AF)),
     ),
   );
+}
+
+void _showImageGallery(BuildContext context, List<String> imageUrls) {
+  if (imageUrls.isEmpty) return;
+  showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Close image preview',
+    barrierColor: Colors.black.withValues(alpha: 0.78),
+    transitionDuration: const Duration(milliseconds: 120),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return _PostImageGalleryDialog(imageUrls: imageUrls);
+    },
+  );
+}
+
+class _PostImageGalleryDialog extends StatefulWidget {
+  const _PostImageGalleryDialog({required this.imageUrls});
+
+  final List<String> imageUrls;
+
+  @override
+  State<_PostImageGalleryDialog> createState() =>
+      _PostImageGalleryDialogState();
+}
+
+class _PostImageGalleryDialogState extends State<_PostImageGalleryDialog> {
+  late final PageController _pageController;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+        child: Column(
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.5),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: 'Close image preview',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      controller: _pageController,
+                      itemCount: widget.imageUrls.length,
+                      onPageChanged: (index) {
+                        setState(() => _currentIndex = index);
+                      },
+                      itemBuilder: (context, index) {
+                        return Image.network(
+                          widget.imageUrls[index],
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const _ImageErrorPlaceholder();
+                          },
+                        );
+                      },
+                    ),
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          child: Text(
+                            '${_currentIndex + 1}/${widget.imageUrls.length}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageErrorPlaceholder extends StatelessWidget {
+  const _ImageErrorPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: AppTheme.surfaceGrey,
+      child: Center(
+        child: Icon(Icons.broken_image, color: AppTheme.textSecondary),
+      ),
+    );
+  }
 }

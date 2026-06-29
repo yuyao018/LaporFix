@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/function_appbar.dart';
+import 'post_details_page.dart';
 import 'services/community_repository.dart';
 import 'viewmodels/vote_insight_view_model.dart';
 
@@ -105,9 +106,17 @@ class _VoteInsightPageState extends State<VoteInsightPage> {
         final issue = item.issue;
 
         final title =
-            'Category: ${issue.category} - ${issue.location.heading.isNotEmpty ? issue.location.heading : issue.location.postcode}';
+            'Category: ${issue.category} - ${issue.location.displayName.isNotEmpty ? issue.location.displayName : issue.location.postcode}';
 
-        return Container(
+        return GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PostDetailsPage(issueId: issue.id),
+              ),
+            );
+          },
+          child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: const Color(0xFFEAF2FF),
@@ -202,6 +211,7 @@ class _VoteInsightPageState extends State<VoteInsightPage> {
               ),
             ],
           ),
+        ),
         );
       },
     );
